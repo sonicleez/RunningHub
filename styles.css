@@ -946,6 +946,102 @@ body {
     font-size: 11px;
 }
 
+/* ===== Color Picker ===== */
+.color-picker-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-picker-field input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
+}
+
+.color-picker-field input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.color-picker-field input[type="color"]::-webkit-color-swatch {
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-color);
+}
+
+.color-hex-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-color);
+}
+
+/* ===== Lighting Control ===== */
+.lighting-control {
+    width: 100%;
+}
+
+.lighting-canvas-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(15, 15, 35, 0.9) 100%);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 10px;
+}
+
+.lighting-canvas-container canvas {
+    border-radius: var(--radius-sm);
+}
+
+.lighting-info {
+    margin-top: 8px;
+    display: flex;
+    gap: 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.lighting-info strong {
+    color: var(--accent-warning);
+    font-weight: 600;
+}
+
+.lighting-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lighting-slider-row input[type="range"] {
+    flex: 1;
+}
+
+.lighting-slider-row .param-value {
+    min-width: 50px;
+    text-align: right;
+    color: var(--accent-warning);
+    font-weight: 600;
+}
+
 /* ===== Status ===== */
 .status-container {
     margin-top: 20px;

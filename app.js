@@ -93,6 +93,13 @@ const PARAM_CONFIG = {
     new_resolution: { type: 'number', min: 256, max: 4096, step: 16, label: 'Resolution', priority: 3 },
     batch_size: { type: 'number', min: 1, max: 16, step: 1, label: 'Batch Size', priority: 3 },
 
+    // Priority 3.5: Lighting parameters (Qwen Multiangle Lightning)
+    light_azimuth: { type: 'lighting', label: 'Light Azimuth', min: 0, max: 360, step: 1, priority: 3.5 },
+    light_elevation: { type: 'slider', min: -90, max: 90, step: 1, label: 'Light Elevation', priority: 3.5 },
+    light_intensity: { type: 'slider', min: 0, max: 20, step: 0.1, label: 'Light Intensity', priority: 3.5 },
+    light_color_hex: { type: 'color', label: 'Light Color', priority: 3.5 },
+    cinematic_mode: { type: 'checkbox', label: 'Cinematic Mode', priority: 3.5 },
+
     // Priority 4: Ratio/Angle/Camera parameters
     horizontal_angle: { type: 'slider', min: -180, max: 180, step: 1, label: 'Horizontal Angle', priority: 4 },
     vertical_angle: { type: 'slider', min: -90, max: 90, step: 1, label: 'Vertical Angle', priority: 4 },
@@ -121,6 +128,7 @@ const NODE_PRIORITY = {
     'LoraLoaderModelOnly': 1.5,
     'CLIPTextEncode': 2,
     'TextEncodeQwenImageEditPlus': 2,
+    'qwenmultianglelight': 2.5,  // Lighting node
     'QwenMultiangleCameraNode': 3,
     'EmptyLatentImage': 4,
     'KSampler': 5,
@@ -305,6 +313,41 @@ function renderParamInput(param) {
             `;
             break;
 
+        case 'color':
+            // Color picker with hex input
+            inputHtml = `
+                <div class="color-picker-field">
+                    <input type="color" id="${inputId}-picker" value="${currentValue || '#ffffff'}"
+                           onchange="document.getElementById('${inputId}').value = this.value; document.getElementById('${inputId}-preview').style.background = this.value;">
+                    <input type="text" id="${inputId}" value="${currentValue || '#ffffff'}" 
+                           pattern="^#[0-9A-Fa-f]{6}$" placeholder="#ffffff"
+                           class="color-hex-input"
+                           onchange="document.getElementById('${inputId}-picker').value = this.value; document.getElementById('${inputId}-preview').style.background = this.value;">
+                    <div id="${inputId}-preview" class="color-preview" style="background: ${currentValue || '#ffffff'}"></div>
+                </div>
+            `;
+            break;
+
+        case 'lighting':
+            // 3D Lighting visualization with interactive canvas
+            inputHtml = `
+                <div class="lighting-control" id="${inputId}-control">
+                    <div class="lighting-canvas-container">
+                        <canvas id="${inputId}-canvas" width="200" height="200"></canvas>
+                        <div class="lighting-info">
+                            <span class="lighting-azimuth">Azimuth: <strong id="${inputId}-az-display">${currentValue || 0}°</strong></span>
+                        </div>
+                    </div>
+                    <div class="lighting-slider-row">
+                        <input type="range" id="${inputId}" min="${config.min || 0}" max="${config.max || 360}" step="${config.step || 1}" 
+                               value="${currentValue || 0}"
+                               oninput="updateLightingCanvas('${inputId}', this.value); document.getElementById('${inputId}-az-display').textContent = this.value + '°'">
+                        <span class="param-value">${currentValue || 0}°</span>
+                    </div>
+                </div>
+            `;
+            break;
+
         default:
             inputHtml = `<input type="text" id="${inputId}" value="${currentValue || ''}">`;
     }
@@ -317,6 +360,88 @@ function renderParamInput(param) {
     `;
 }
 
+// Lighting Canvas Visualization
+function updateLightingCanvas(inputId, azimuth) {
+    const canvas = document.getElementById(`${inputId}-canvas`);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 70;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw grid
+    ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
+    ctx.lineWidth = 1;
+
+    // Draw ellipse (floor)
+    ctx.beginPath();
+    ctx.ellipse(centerX, centerY + 30, radius, radius * 0.4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw center object (cube representation)
+    ctx.fillStyle = 'rgba(139, 92, 246, 0.6)';
+    ctx.fillRect(centerX - 15, centerY - 10, 30, 40);
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.8)';
+    ctx.strokeRect(centerX - 15, centerY - 10, 30, 40);
+
+    // Calculate light position based on azimuth
+    const angleRad = (azimuth - 90) * Math.PI / 180;
+    const lightX = centerX + Math.cos(angleRad) * radius;
+    const lightY = centerY + Math.sin(angleRad) * radius * 0.4 + 30;
+
+    // Draw light ray
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.moveTo(lightX, lightY);
+    ctx.lineTo(centerX, centerY + 10);
+    ctx.stroke();
+
+    // Draw light source
+    const gradient = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, 20);
+    gradient.addColorStop(0, 'rgba(251, 191, 36, 1)');
+    gradient.addColorStop(0.5, 'rgba(251, 191, 36, 0.5)');
+    gradient.addColorStop(1, 'rgba(251, 191, 36, 0)');
+
+    ctx.beginPath();
+    ctx.fillStyle = gradient;
+    ctx.arc(lightX, lightY, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw light bulb center
+    ctx.beginPath();
+    ctx.fillStyle = '#fbbf24';
+    ctx.arc(lightX, lightY, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw compass directions
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', centerX, centerY - radius + 45);
+    ctx.fillText('S', centerX, centerY + radius + 55);
+    ctx.fillText('E', centerX + radius + 10, centerY + 30);
+    ctx.fillText('W', centerX - radius - 10, centerY + 30);
+}
+
+// Initialize lighting canvases after render
+function initLightingCanvases() {
+    const lightingControls = document.querySelectorAll('.lighting-control');
+    lightingControls.forEach(control => {
+        const canvas = control.querySelector('canvas');
+        if (canvas) {
+            const inputId = canvas.id.replace('-canvas', '');
+            const input = document.getElementById(inputId);
+            if (input) {
+                updateLightingCanvas(inputId, input.value);
+            }
+        }
+    });
+}
 function collectParameterValues() {
     const nodeInfoList = [];
 
@@ -409,6 +534,9 @@ function applyDetectedNodes() {
 
     // Show the panel
     document.getElementById('workflowParamsPanel').classList.remove('hidden');
+
+    // Initialize special UI components
+    initLightingCanvases();
 
     console.log(`✅ Loaded ${editableParameters.length} nodes with editable parameters`);
 }
