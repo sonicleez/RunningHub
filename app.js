@@ -67,45 +67,56 @@ const SKIP_NODE_TYPES = [
     // LoadImage is NOT skipped - we want to detect it for file uploads
 ];
 
-// Parameter configurations
+// Parameter configurations with priority (lower = show first)
 const PARAM_CONFIG = {
-    // Seed parameters
-    seed: { type: 'number', random: true, label: 'Seed' },
-    noise_seed: { type: 'number', random: true, label: 'Noise Seed' },
+    // Priority 1: Image uploads (most important)
+    image: { type: 'image', label: 'Image', priority: 1 },
+    image1: { type: 'image', label: 'Image 1', priority: 1 },
+    image2: { type: 'image', label: 'Image 2', priority: 1 },
+    image3: { type: 'image', label: 'Image 3', priority: 1 },
+    image4: { type: 'image', label: 'Image 4', priority: 1 },
+    image5: { type: 'image', label: 'Image 5', priority: 1 },
 
-    // Sampler parameters
-    steps: { type: 'slider', min: 1, max: 100, step: 1, label: 'Steps' },
-    cfg: { type: 'slider', min: 1, max: 20, step: 0.5, label: 'CFG Scale' },
-    denoise: { type: 'slider', min: 0, max: 1, step: 0.01, label: 'Denoise' },
-    sampler_name: { type: 'select', options: ['euler', 'euler_ancestral', 'heun', 'dpm_2', 'dpm_2_ancestral', 'lms', 'dpm_fast', 'dpm_adaptive', 'dpmpp_2s_ancestral', 'dpmpp_sde', 'dpmpp_2m', 'dpmpp_3m_sde', 'ddim', 'uni_pc'], label: 'Sampler' },
-    scheduler: { type: 'select', options: ['normal', 'karras', 'exponential', 'sgm_uniform', 'simple', 'ddim_uniform'], label: 'Scheduler' },
+    // Priority 2: Text/Prompt parameters
+    text: { type: 'textarea', label: 'Text/Prompt', priority: 2 },
+    prompt: { type: 'textarea', label: 'Prompt', priority: 2 },
 
-    // Size parameters
-    width: { type: 'number', min: 64, max: 4096, step: 64, label: 'Width' },
-    height: { type: 'number', min: 64, max: 4096, step: 64, label: 'Height' },
-    new_resolution: { type: 'number', min: 256, max: 4096, step: 16, label: 'Resolution' },
-    batch_size: { type: 'number', min: 1, max: 16, step: 1, label: 'Batch Size' },
+    // Priority 3: Size parameters
+    width: { type: 'number', min: 64, max: 4096, step: 64, label: 'Width', priority: 3 },
+    height: { type: 'number', min: 64, max: 4096, step: 64, label: 'Height', priority: 3 },
+    new_resolution: { type: 'number', min: 256, max: 4096, step: 16, label: 'Resolution', priority: 3 },
+    batch_size: { type: 'number', min: 1, max: 16, step: 1, label: 'Batch Size', priority: 3 },
 
-    // Angle/Camera parameters
-    horizontal_angle: { type: 'slider', min: -180, max: 180, step: 1, label: 'Horizontal Angle' },
-    vertical_angle: { type: 'slider', min: -90, max: 90, step: 1, label: 'Vertical Angle' },
-    zoom: { type: 'slider', min: 0.1, max: 10, step: 0.1, label: 'Zoom' },
+    // Priority 4: Ratio/Angle/Camera parameters
+    horizontal_angle: { type: 'slider', min: -180, max: 180, step: 1, label: 'Horizontal Angle', priority: 4 },
+    vertical_angle: { type: 'slider', min: -90, max: 90, step: 1, label: 'Vertical Angle', priority: 4 },
+    zoom: { type: 'slider', min: 0.1, max: 10, step: 0.1, label: 'Zoom', priority: 4 },
 
-    // Text parameters
-    text: { type: 'textarea', label: 'Text/Prompt' },
-    prompt: { type: 'textarea', label: 'Prompt' },
+    // Priority 5: Seed parameters  
+    seed: { type: 'number', random: true, label: 'Seed', priority: 5 },
+    noise_seed: { type: 'number', random: true, label: 'Noise Seed', priority: 5 },
 
-    // Image parameters - now with file upload
-    image: { type: 'image', label: 'Image' },
-    image1: { type: 'image', label: 'Image 1' },
-    image2: { type: 'image', label: 'Image 2' },
-    image3: { type: 'image', label: 'Image 3' },
-    image4: { type: 'image', label: 'Image 4' },
-    image5: { type: 'image', label: 'Image 5' },
+    // Priority 6: Sampler parameters
+    steps: { type: 'slider', min: 1, max: 100, step: 1, label: 'Steps', priority: 6 },
+    cfg: { type: 'slider', min: 1, max: 20, step: 0.5, label: 'CFG Scale', priority: 6 },
+    denoise: { type: 'slider', min: 0, max: 1, step: 0.01, label: 'Denoise', priority: 6 },
+    sampler_name: { type: 'select', options: ['euler', 'euler_ancestral', 'heun', 'dpm_2', 'dpm_2_ancestral', 'lms', 'dpm_fast', 'dpm_adaptive', 'dpmpp_2s_ancestral', 'dpmpp_sde', 'dpmpp_2m', 'dpmpp_3m_sde', 'ddim', 'uni_pc'], label: 'Sampler', priority: 6 },
+    scheduler: { type: 'select', options: ['normal', 'karras', 'exponential', 'sgm_uniform', 'simple', 'ddim_uniform'], label: 'Scheduler', priority: 6 },
 
-    // Boolean parameters
-    default_prompts: { type: 'checkbox', label: 'Default Prompts' },
-    camera_view: { type: 'checkbox', label: 'Camera View' }
+    // Priority 7: Boolean parameters
+    default_prompts: { type: 'checkbox', label: 'Default Prompts', priority: 7 },
+    camera_view: { type: 'checkbox', label: 'Camera View', priority: 7 }
+};
+
+// Node type priority (LoadImage first, then prompt nodes, then others)
+const NODE_PRIORITY = {
+    'LoadImage': 1,
+    'CLIPTextEncode': 2,
+    'TextEncodeQwenImageEditPlus': 2,
+    'QwenMultiangleCameraNode': 3,
+    'EmptyLatentImage': 4,
+    'KSampler': 5,
+    'SeedVR2': 6
 };
 
 function parseWorkflowForParameters(jsonText) {
@@ -145,6 +156,13 @@ function parseWorkflowForParameters(jsonText) {
             }
 
             if (nodeParams.length > 0) {
+                // Sort params within node by priority
+                nodeParams.sort((a, b) => {
+                    const priorityA = a.config.priority || 99;
+                    const priorityB = b.config.priority || 99;
+                    return priorityA - priorityB;
+                });
+
                 editableParameters.push({
                     nodeId,
                     classType,
@@ -153,6 +171,13 @@ function parseWorkflowForParameters(jsonText) {
                 });
             }
         }
+
+        // Sort nodes by priority (LoadImage first, then prompt nodes, etc.)
+        editableParameters.sort((a, b) => {
+            const priorityA = NODE_PRIORITY[a.classType] || 99;
+            const priorityB = NODE_PRIORITY[b.classType] || 99;
+            return priorityA - priorityB;
+        });
 
         return { success: true, parameters: editableParameters };
     } catch (error) {
