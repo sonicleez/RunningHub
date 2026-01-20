@@ -57,11 +57,6 @@ const elements = {
     importBtn: document.getElementById('importBtn'),
     importStatus: document.getElementById('importStatus'),
     importProgress: document.getElementById('importProgress'),
-    // Size control elements
-    widthInput: document.getElementById('widthInput'),
-    heightInput: document.getElementById('heightInput'),
-    sizeNodeId: document.getElementById('sizeNodeId'),
-    presetBtns: document.querySelectorAll('.preset-btn'),
     // Profile elements
     profileSelect: document.getElementById('profileSelect'),
     saveProfileBtn: document.getElementById('saveProfileBtn'),
@@ -106,26 +101,13 @@ function saveProfiles(profiles) {
 
 function getCurrentSettings() {
     return {
-        workflowId: elements.workflowInput.value,
-        promptNodeId: elements.promptNodeId.value,
-        seedNodeId: elements.seedNodeId.value,
-        imageNodeId: elements.imageNodeId.value,
-        sizeNodeId: elements.sizeNodeId.value,
-        width: elements.widthInput.value,
-        height: elements.heightInput.value
+        workflowId: elements.workflowInput.value
     };
 }
 
 function applyProfile(settings) {
     if (!settings) return;
-
     elements.workflowInput.value = settings.workflowId || '';
-    elements.promptNodeId.value = settings.promptNodeId || '5';
-    elements.seedNodeId.value = settings.seedNodeId || '4';
-    elements.imageNodeId.value = settings.imageNodeId || '1';
-    elements.sizeNodeId.value = settings.sizeNodeId || '7';
-    elements.widthInput.value = settings.width || '1920';
-    elements.heightInput.value = settings.height || '1080';
 }
 
 function updateProfileDropdown() {
@@ -755,65 +737,21 @@ async function generate() {
     try {
         setGenerating(true);
 
-        // Build nodeInfoList
-        const nodeInfoList = [];
+        // Build nodeInfoList from dynamic parameters
+        const nodeInfoList = collectParameterValues();
 
-        // Get configured node IDs
-        const promptNodeId = elements.promptNodeId.value.trim() || '6';
-        const seedNodeId = elements.seedNodeId.value.trim() || '3';
-        const imageNodeId = elements.imageNodeId.value.trim() || '1';
-
-        // Upload image if provided
-        if (state.uploadedFile) {
-            updateStatus(10, 'Uploading image...');
-            const uploadResult = await uploadFile(state.uploadedFile);
-            state.uploadedFileName = uploadResult.fileName;
-
-            nodeInfoList.push({
-                nodeId: imageNodeId,
-                fieldName: 'image',
-                fieldValue: uploadResult.fileName
-            });
-        }
-
-        // Add prompt if provided
+        // Add prompt if provided (from main input)
         const prompt = elements.promptInput.value.trim();
-        if (prompt) {
+        if (prompt && editableParameters.length === 0) {
+            // Only use main prompt input if no dynamic workflow is loaded
             nodeInfoList.push({
-                nodeId: promptNodeId,
+                nodeId: '6',
                 fieldName: 'text',
                 fieldValue: prompt
             });
         }
 
-        // Add seed
-        let seed = elements.seedInput.value.trim();
-        if (!seed) {
-            seed = randomSeed().toString();
-        }
-        nodeInfoList.push({
-            nodeId: seedNodeId,
-            fieldName: 'seed',
-            fieldValue: seed
-        });
-
-        // Add size (width/height) if size node is configured
-        const sizeNodeId = elements.sizeNodeId.value.trim();
-        if (sizeNodeId) {
-            const width = parseInt(elements.widthInput.value) || 1920;
-            const height = parseInt(elements.heightInput.value) || 1080;
-
-            nodeInfoList.push({
-                nodeId: sizeNodeId,
-                fieldName: 'width',
-                fieldValue: width.toString()
-            });
-            nodeInfoList.push({
-                nodeId: sizeNodeId,
-                fieldName: 'height',
-                fieldValue: height.toString()
-            });
-        }
+        console.log('📦 NodeInfoList:', nodeInfoList);
 
         // Create task
         updateStatus(20, 'Creating task...');
@@ -967,8 +905,8 @@ async function runStressTest() {
         elements.jobQueueCount.textContent = `${runningCount} running, ${createdCount} created`;
     }
 
-    const promptNodeId = elements.promptNodeId.value.trim() || '5';
-    const seedNodeId = elements.seedNodeId.value.trim() || '4';
+    // Use dynamic parameters from workflow if available
+    const dynamicParams = collectParameterValues();
 
     let created = 0;
     let createFailed = 0;
@@ -1262,21 +1200,6 @@ elements.clearBtn.addEventListener('click', (e) => {
     elements.fileInput.value = '';
 });
 
-// Size preset buttons
-elements.presetBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        // Update active state
-        elements.presetBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Update width/height inputs
-        const width = btn.dataset.width;
-        const height = btn.dataset.height;
-        elements.widthInput.value = width;
-        elements.heightInput.value = height;
-    });
-});
-
 // Generate button
 elements.generateBtn.addEventListener('click', generate);
 
@@ -1290,11 +1213,6 @@ elements.importToggle.addEventListener('click', () => {
 });
 
 elements.importBtn.addEventListener('click', importTasks);
-
-// Randomize seed
-elements.randomizeBtn.addEventListener('click', () => {
-    elements.seedInput.value = randomSeed();
-});
 
 // Settings modal
 elements.settingsBtn.addEventListener('click', () => {
@@ -1318,12 +1236,6 @@ elements.saveSettingsBtn.addEventListener('click', () => {
         setApiKey(key);
         elements.settingsModal.classList.add('hidden');
     }
-});
-
-// Config toggle
-elements.configToggle.addEventListener('click', () => {
-    elements.configToggle.classList.toggle('open');
-    elements.configFields.classList.toggle('hidden');
 });
 
 // Profile management
