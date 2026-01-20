@@ -186,145 +186,236 @@ function deleteSelectedProfile() {
     console.log(`🗑️ Profile "${name}" deleted`);
 }
 
-// ===== Workflow JSON Auto-Detect =====
+// ===== Dynamic Parameter Editor =====
 
 let detectedSettings = {};
+let editableParameters = [];
+let workflowData = null;
 
-// Node type mapping for auto-detection
-const NODE_TYPE_MAP = {
-    // Prompt nodes - contain text input
-    'CLIPTextEncode': { role: 'prompt', field: 'text' },
-    'CLIPTextEncodeSDXL': { role: 'prompt', field: 'text' },
-    'PromptExpansion': { role: 'prompt', field: 'text' },
+// Nodes to skip (system/loader nodes)
+const SKIP_NODE_TYPES = [
+    'UNETLoader', 'CLIPLoader', 'VAELoader', 'CheckpointLoaderSimple',
+    'LoraLoader', 'LoraLoaderModelOnly', 'ControlNetLoader',
+    'SaveImage', 'PreviewImage', 'PreviewAny', 'VAEDecode', 'VAEEncode',
+    'ConditioningZeroOut', 'ImageConcanate', 'SeedVR2BlockSwap', 'SeedVR2ExtraArgs',
+    'LayerUtility: PurgeVRAM V2', 'ImageScaleToTotalPixels'
+];
 
-    // Sampler nodes - contain seed
-    'KSampler': { role: 'seed', field: 'seed' },
-    'KSamplerAdvanced': { role: 'seed', field: 'noise_seed' },
-    'SamplerCustom': { role: 'seed', field: 'seed' },
+// Parameter configurations
+const PARAM_CONFIG = {
+    // Seed parameters
+    seed: { type: 'number', random: true, label: 'Seed' },
+    noise_seed: { type: 'number', random: true, label: 'Noise Seed' },
 
-    // Size nodes - contain width/height
-    'EmptyLatentImage': { role: 'size', fields: ['width', 'height'] },
-    'EmptyImage': { role: 'size', fields: ['width', 'height'] },
-    'LatentFromBatch': { role: 'size', fields: ['width', 'height'] },
+    // Sampler parameters
+    steps: { type: 'slider', min: 1, max: 100, step: 1, label: 'Steps' },
+    cfg: { type: 'slider', min: 1, max: 20, step: 0.5, label: 'CFG Scale' },
+    denoise: { type: 'slider', min: 0, max: 1, step: 0.01, label: 'Denoise' },
+    sampler_name: { type: 'select', options: ['euler', 'euler_ancestral', 'heun', 'dpm_2', 'dpm_2_ancestral', 'lms', 'dpm_fast', 'dpm_adaptive', 'dpmpp_2s_ancestral', 'dpmpp_sde', 'dpmpp_2m', 'dpmpp_3m_sde', 'ddim', 'uni_pc'], label: 'Sampler' },
+    scheduler: { type: 'select', options: ['normal', 'karras', 'exponential', 'sgm_uniform', 'simple', 'ddim_uniform'], label: 'Scheduler' },
 
-    // Image input nodes
-    'LoadImage': { role: 'image', field: 'image' },
-    'LoadImageMask': { role: 'image', field: 'image' }
+    // Size parameters
+    width: { type: 'number', min: 64, max: 4096, step: 64, label: 'Width' },
+    height: { type: 'number', min: 64, max: 4096, step: 64, label: 'Height' },
+    new_resolution: { type: 'number', min: 256, max: 4096, step: 16, label: 'Resolution' },
+    batch_size: { type: 'number', min: 1, max: 16, step: 1, label: 'Batch Size' },
+
+    // Angle/Camera parameters
+    horizontal_angle: { type: 'slider', min: -180, max: 180, step: 1, label: 'Horizontal Angle' },
+    vertical_angle: { type: 'slider', min: -90, max: 90, step: 1, label: 'Vertical Angle' },
+    zoom: { type: 'slider', min: 0.1, max: 10, step: 0.1, label: 'Zoom' },
+
+    // Text parameters
+    text: { type: 'textarea', label: 'Text' },
+    prompt: { type: 'textarea', label: 'Prompt' },
+
+    // Image parameters
+    image: { type: 'file', label: 'Image' },
+
+    // Boolean parameters
+    default_prompts: { type: 'checkbox', label: 'Default Prompts' },
+    camera_view: { type: 'checkbox', label: 'Camera View' }
 };
 
-function parseWorkflowJson(jsonText) {
+function parseWorkflowForParameters(jsonText) {
     try {
         const workflow = JSON.parse(jsonText);
-        const detected = {
-            prompt: null,
-            seed: null,
-            size: null,
-            image: null,
-            allNodes: []
-        };
+        workflowData = workflow;
+        editableParameters = [];
 
-        // Iterate through all nodes
         for (const [nodeId, node] of Object.entries(workflow)) {
             const classType = node.class_type;
 
-            // Store all nodes for reference
-            detected.allNodes.push({
-                id: nodeId,
-                type: classType,
-                inputs: node.inputs
-            });
+            // Skip system nodes
+            if (SKIP_NODE_TYPES.includes(classType)) continue;
 
-            // Check if this is a known node type
-            const mapping = NODE_TYPE_MAP[classType];
-            if (mapping) {
-                if (mapping.role === 'prompt' && !detected.prompt) {
-                    detected.prompt = { nodeId, type: classType, field: mapping.field };
-                }
-                if (mapping.role === 'seed' && !detected.seed) {
-                    detected.seed = { nodeId, type: classType, field: mapping.field };
-                }
-                if (mapping.role === 'size' && !detected.size) {
-                    detected.size = {
-                        nodeId,
-                        type: classType,
-                        width: node.inputs?.width,
-                        height: node.inputs?.height
-                    };
-                }
-                if (mapping.role === 'image' && !detected.image) {
-                    detected.image = { nodeId, type: classType, field: mapping.field };
-                }
+            const nodeParams = [];
+
+            // Check each input
+            for (const [inputName, inputValue] of Object.entries(node.inputs || {})) {
+                // Skip connections (arrays like [nodeId, outputIndex])
+                if (Array.isArray(inputValue)) continue;
+
+                // Skip string paths for models/files (contain .safetensors, .png etc)
+                if (typeof inputValue === 'string' &&
+                    (inputValue.includes('.safetensors') ||
+                        inputValue.includes('.ckpt') ||
+                        inputValue.includes('.pt'))) continue;
+
+                // This is an editable primitive input
+                const config = PARAM_CONFIG[inputName] || { type: 'text', label: inputName };
+
+                nodeParams.push({
+                    nodeId,
+                    fieldName: inputName,
+                    currentValue: inputValue,
+                    config: { ...config, label: config.label || inputName }
+                });
+            }
+
+            if (nodeParams.length > 0) {
+                editableParameters.push({
+                    nodeId,
+                    classType,
+                    title: node._meta?.title || classType,
+                    params: nodeParams
+                });
             }
         }
 
-        return { success: true, detected };
+        return { success: true, parameters: editableParameters };
     } catch (error) {
         return { success: false, error: error.message };
     }
 }
 
-function displayDetectedNodes(detected) {
+function renderDynamicParameters() {
     const container = document.getElementById('detectedList');
     container.innerHTML = '';
 
-    const items = [
-        { label: 'Prompt', data: detected.prompt },
-        { label: 'Seed/Sampler', data: detected.seed },
-        { label: 'Size', data: detected.size },
-        { label: 'Image Input', data: detected.image }
-    ];
-
-    items.forEach(item => {
-        if (item.data) {
-            const div = document.createElement('div');
-            div.className = 'detected-item';
-            div.innerHTML = `
-                <span class="node-type">${item.label}: ${item.data.type}</span>
-                <span class="node-id">Node ID: ${item.data.nodeId}</span>
-            `;
-            container.appendChild(div);
-        }
-    });
-
-    document.getElementById('detectedNodes').classList.remove('hidden');
-
-    // Store for later apply
-    detectedSettings = detected;
-}
-
-function applyDetectedNodes() {
-    if (!detectedSettings.prompt && !detectedSettings.seed && !detectedSettings.size) {
-        alert('No nodes detected. Please analyze workflow first.');
+    if (editableParameters.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted);">No editable parameters found</p>';
         return;
     }
 
-    if (detectedSettings.prompt) {
-        elements.promptNodeId.value = detectedSettings.prompt.nodeId;
-    }
-    if (detectedSettings.seed) {
-        elements.seedNodeId.value = detectedSettings.seed.nodeId;
-    }
-    if (detectedSettings.size) {
-        elements.sizeNodeId.value = detectedSettings.size.nodeId;
-        if (detectedSettings.size.width) {
-            elements.widthInput.value = detectedSettings.size.width;
-        }
-        if (detectedSettings.size.height) {
-            elements.heightInput.value = detectedSettings.size.height;
-        }
-    }
-    if (detectedSettings.image) {
-        elements.imageNodeId.value = detectedSettings.image.nodeId;
+    editableParameters.forEach(nodeGroup => {
+        const nodeCard = document.createElement('div');
+        nodeCard.className = 'param-node-card';
+
+        let paramsHtml = '';
+        nodeGroup.params.forEach(param => {
+            paramsHtml += renderParamInput(param);
+        });
+
+        nodeCard.innerHTML = `
+            <div class="param-node-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span class="param-node-title">Node ${nodeGroup.nodeId}: ${nodeGroup.title}</span>
+                <span class="param-toggle">▼</span>
+            </div>
+            <div class="param-node-body">
+                ${paramsHtml}
+            </div>
+        `;
+
+        container.appendChild(nodeCard);
+    });
+
+    document.getElementById('detectedNodes').classList.remove('hidden');
+}
+
+function renderParamInput(param) {
+    const { nodeId, fieldName, currentValue, config } = param;
+    const inputId = `param-${nodeId}-${fieldName}`;
+
+    let inputHtml = '';
+
+    switch (config.type) {
+        case 'slider':
+            inputHtml = `
+                <input type="range" id="${inputId}" 
+                    min="${config.min}" max="${config.max}" step="${config.step || 1}"
+                    value="${currentValue}"
+                    oninput="document.getElementById('${inputId}-val').textContent = this.value">
+                <span id="${inputId}-val" class="param-value">${currentValue}</span>
+            `;
+            break;
+
+        case 'number':
+            inputHtml = `
+                <input type="number" id="${inputId}" value="${currentValue}"
+                    ${config.min !== undefined ? `min="${config.min}"` : ''}
+                    ${config.max !== undefined ? `max="${config.max}"` : ''}
+                    ${config.step !== undefined ? `step="${config.step}"` : ''}>
+                ${config.random ? `<button class="param-random-btn" onclick="document.getElementById('${inputId}').value = Math.floor(Math.random() * 999999999)">🎲</button>` : ''}
+            `;
+            break;
+
+        case 'select':
+            const options = config.options.map(opt =>
+                `<option value="${opt}" ${opt === currentValue ? 'selected' : ''}>${opt}</option>`
+            ).join('');
+            inputHtml = `<select id="${inputId}">${options}</select>`;
+            break;
+
+        case 'textarea':
+            inputHtml = `<textarea id="${inputId}" rows="2">${currentValue || ''}</textarea>`;
+            break;
+
+        case 'checkbox':
+            inputHtml = `<input type="checkbox" id="${inputId}" ${currentValue ? 'checked' : ''}>`;
+            break;
+
+        case 'file':
+            inputHtml = `<input type="text" id="${inputId}" value="${currentValue || ''}" placeholder="File path or upload">`;
+            break;
+
+        default:
+            inputHtml = `<input type="text" id="${inputId}" value="${currentValue || ''}">`;
     }
 
+    return `
+        <div class="param-row">
+            <label for="${inputId}">${config.label}</label>
+            <div class="param-input">${inputHtml}</div>
+        </div>
+    `;
+}
+
+function collectParameterValues() {
+    const nodeInfoList = [];
+
+    editableParameters.forEach(nodeGroup => {
+        nodeGroup.params.forEach(param => {
+            const inputId = `param-${param.nodeId}-${param.fieldName}`;
+            const element = document.getElementById(inputId);
+
+            if (element) {
+                let value = element.type === 'checkbox' ? element.checked : element.value;
+
+                // Only add if value changed from original
+                if (String(value) !== String(param.currentValue)) {
+                    nodeInfoList.push({
+                        nodeId: param.nodeId,
+                        fieldName: param.fieldName,
+                        fieldValue: String(value)
+                    });
+                }
+            }
+        });
+    });
+
+    return nodeInfoList;
+}
+
+function applyDetectedNodes() {
     // Close modal
     document.getElementById('importJsonModal').classList.add('hidden');
 
-    // Open config to show applied values
-    elements.configToggle.classList.add('open');
-    elements.configFields.classList.remove('hidden');
-
-    console.log('✅ Node IDs applied from workflow');
+    // Show message about parameters
+    if (editableParameters.length > 0) {
+        console.log(`✅ Loaded ${editableParameters.length} nodes with editable parameters`);
+        alert(`Loaded ${editableParameters.length} node groups with editable parameters.\n\nModify values in the panel, then click Generate.`);
+    }
 }
 
 // ===== Timer Functions =====
@@ -1169,9 +1260,10 @@ elements.analyzeJsonBtn.addEventListener('click', () => {
         return;
     }
 
-    const result = parseWorkflowJson(jsonText);
+    const result = parseWorkflowForParameters(jsonText);
     if (result.success) {
-        displayDetectedNodes(result.detected);
+        renderDynamicParameters();
+        console.log(`🔍 Found ${result.parameters.length} editable node groups`);
     } else {
         alert('Invalid JSON: ' + result.error);
     }

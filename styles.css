@@ -603,6 +603,149 @@ body {
     opacity: 0.9;
 }
 
+/* ===== Dynamic Parameter Cards ===== */
+.param-node-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.param-node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.param-node-header:hover {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.param-node-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.param-toggle {
+    font-size: 10px;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.param-node-card.collapsed .param-toggle {
+    transform: rotate(-90deg);
+}
+
+.param-node-card.collapsed .param-node-body {
+    display: none;
+}
+
+.param-node-body {
+    padding: 12px 16px;
+}
+
+.param-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.param-row:last-child {
+    margin-bottom: 0;
+}
+
+.param-row label {
+    min-width: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.param-input {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.param-input input[type="range"] {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-primary);
+    border-radius: 3px;
+    -webkit-appearance: none;
+}
+
+.param-input input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.param-value {
+    min-width: 50px;
+    font-size: 12px;
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-align: right;
+}
+
+.param-input input[type="number"],
+.param-input input[type="text"],
+.param-input select {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.param-input textarea {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.param-input input:focus,
+.param-input select:focus,
+.param-input textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.param-random-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 16px;
+    transition: var(--transition);
+}
+
+.param-random-btn:hover {
+    background: var(--accent-primary);
+}
+
 /* ===== Status ===== */
 .status-container {
     margin-top: 20px;
