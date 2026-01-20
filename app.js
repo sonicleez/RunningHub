@@ -1,66 +1,29 @@
 /**
  * RunningHub AI Studio - Main Application
- * Features: Image Generation, Timing, Stress Test
+ * Dynamic Workflow UI
  */
 
 // DOM Elements
 const elements = {
-    uploadZone: document.getElementById('uploadZone'),
-    uploadPlaceholder: document.getElementById('uploadPlaceholder'),
-    previewImage: document.getElementById('previewImage'),
-    clearBtn: document.getElementById('clearBtn'),
-    fileInput: document.getElementById('fileInput'),
-    promptInput: document.getElementById('promptInput'),
+    // Core elements
     workflowInput: document.getElementById('workflowInput'),
-    seedInput: document.getElementById('seedInput'),
-    randomizeBtn: document.getElementById('randomizeBtn'),
     generateBtn: document.getElementById('generateBtn'),
+    // Status elements
     statusContainer: document.getElementById('statusContainer'),
-    statusProgress: document.getElementById('statusProgress'),
+    progressFill: document.getElementById('progressFill'),
     statusText: document.getElementById('statusText'),
     statusTimer: document.getElementById('statusTimer'),
+    // Results elements
     resultsGrid: document.getElementById('resultsGrid'),
     emptyState: document.getElementById('emptyState'),
     totalResults: document.getElementById('totalResults'),
     totalTime: document.getElementById('totalTime'),
+    // Settings modal
     settingsBtn: document.getElementById('settingsBtn'),
     settingsModal: document.getElementById('settingsModal'),
     closeModalBtn: document.getElementById('closeModalBtn'),
     apiKeyInput: document.getElementById('apiKeyInput'),
     saveSettingsBtn: document.getElementById('saveSettingsBtn'),
-    // Stress test elements
-    batchPrompts: document.getElementById('batchPrompts'),
-    concurrencyInput: document.getElementById('concurrencyInput'),
-    stressTestBtn: document.getElementById('stressTestBtn'),
-    stressStats: document.getElementById('stressStats'),
-    statTotal: document.getElementById('statTotal'),
-    statCompleted: document.getElementById('statCompleted'),
-    statFailed: document.getElementById('statFailed'),
-    statAvgTime: document.getElementById('statAvgTime'),
-    // Node ID config elements
-    configToggle: document.getElementById('configToggle'),
-    configFields: document.getElementById('configFields'),
-    promptNodeId: document.getElementById('promptNodeId'),
-    seedNodeId: document.getElementById('seedNodeId'),
-    imageNodeId: document.getElementById('imageNodeId'),
-    // Prompt counter elements
-    charCount: document.getElementById('charCount'),
-    wordCount: document.getElementById('wordCount'),
-    // Job queue elements
-    jobQueue: document.getElementById('jobQueue'),
-    jobQueueCount: document.getElementById('jobQueueCount'),
-    jobList: document.getElementById('jobList'),
-    // Import elements
-    importToggle: document.getElementById('importToggle'),
-    importFields: document.getElementById('importFields'),
-    taskIds: document.getElementById('taskIds'),
-    importBtn: document.getElementById('importBtn'),
-    importStatus: document.getElementById('importStatus'),
-    importProgress: document.getElementById('importProgress'),
-    // Profile elements
-    profileSelect: document.getElementById('profileSelect'),
-    saveProfileBtn: document.getElementById('saveProfileBtn'),
-    deleteProfileBtn: document.getElementById('deleteProfileBtn'),
     // Import JSON elements
     importJsonBtn: document.getElementById('importJsonBtn'),
     importJsonModal: document.getElementById('importJsonModal'),
@@ -89,88 +52,6 @@ let state = {
 // ===== Profile Management =====
 
 const PROFILES_KEY = 'runninghub_profiles';
-
-function getProfiles() {
-    const stored = localStorage.getItem(PROFILES_KEY);
-    return stored ? JSON.parse(stored) : {};
-}
-
-function saveProfiles(profiles) {
-    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
-}
-
-function getCurrentSettings() {
-    return {
-        workflowId: elements.workflowInput.value
-    };
-}
-
-function applyProfile(settings) {
-    if (!settings) return;
-    elements.workflowInput.value = settings.workflowId || '';
-}
-
-function updateProfileDropdown() {
-    const profiles = getProfiles();
-    const currentValue = elements.profileSelect.value;
-
-    // Clear and rebuild options
-    elements.profileSelect.innerHTML = '<option value="">-- Select Profile --</option>';
-
-    Object.keys(profiles).forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        elements.profileSelect.appendChild(option);
-    });
-
-    // Restore selection if it still exists
-    if (profiles[currentValue]) {
-        elements.profileSelect.value = currentValue;
-    }
-}
-
-function saveCurrentProfile() {
-    const name = prompt('Enter profile name:');
-    if (!name || !name.trim()) return;
-
-    const profiles = getProfiles();
-    profiles[name.trim()] = getCurrentSettings();
-    saveProfiles(profiles);
-
-    updateProfileDropdown();
-    elements.profileSelect.value = name.trim();
-
-    console.log(`✅ Profile "${name}" saved`);
-}
-
-function loadSelectedProfile() {
-    const name = elements.profileSelect.value;
-    if (!name) return;
-
-    const profiles = getProfiles();
-    if (profiles[name]) {
-        applyProfile(profiles[name]);
-        console.log(`📂 Profile "${name}" loaded`);
-    }
-}
-
-function deleteSelectedProfile() {
-    const name = elements.profileSelect.value;
-    if (!name) {
-        alert('Please select a profile to delete');
-        return;
-    }
-
-    if (!confirm(`Delete profile "${name}"?`)) return;
-
-    const profiles = getProfiles();
-    delete profiles[name];
-    saveProfiles(profiles);
-
-    updateProfileDropdown();
-    console.log(`🗑️ Profile "${name}" deleted`);
-}
 
 // ===== Dynamic Parameter Editor =====
 
@@ -550,14 +431,6 @@ function updateResultsStats() {
     elements.totalTime.textContent = `${state.totalGenerationTime.toFixed(1)}s total`;
 }
 
-function updatePromptCounter() {
-    const text = elements.promptInput.value;
-    const chars = text.length;
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    elements.charCount.textContent = chars;
-    elements.wordCount.textContent = words;
-}
-
 // ===== API Functions =====
 
 async function uploadFile(file) {
@@ -778,17 +651,6 @@ async function generate() {
             nodeInfoList.push(...imageParams);
         }
 
-        // Add prompt if provided (from main input)
-        const prompt = elements.promptInput.value.trim();
-        if (prompt && editableParameters.length === 0) {
-            // Only use main prompt input if no dynamic workflow is loaded
-            nodeInfoList.push({
-                nodeId: '6',
-                fieldName: 'text',
-                fieldValue: prompt
-            });
-        }
-
         console.log('📦 NodeInfoList:', nodeInfoList);
 
         // Create task
@@ -853,404 +715,14 @@ async function runSingleTask(workflowId, prompt, index) {
             error: error.message,
             prompt,
             index
-        };
-    }
-}
-
-async function runStressTest() {
-    if (state.isStressTesting || state.isGenerating) return;
-
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        elements.settingsModal.classList.remove('hidden');
-        return;
-    }
-
-    const workflowId = elements.workflowInput.value.trim();
-    if (!workflowId) {
-        alert('Please enter a Workflow ID');
-        return;
-    }
-
-    const promptsText = elements.batchPrompts.value.trim();
-    if (!promptsText) {
-        alert('Please enter at least one prompt');
-        return;
-    }
-
-    const prompts = promptsText.split('\n').filter(p => p.trim());
-    if (prompts.length === 0) {
-        alert('Please enter at least one valid prompt');
-        return;
-    }
-
-    state.isStressTesting = true;
-    elements.stressTestBtn.disabled = true;
-    elements.generateBtn.disabled = true;
-
-    // Show stats
-    elements.stressStats.classList.remove('hidden');
-    elements.statTotal.textContent = prompts.length;
-    elements.statCompleted.textContent = '0';
-    elements.statFailed.textContent = '0';
-    elements.statAvgTime.textContent = '-';
-
-    // Initialize job queue display
-    elements.jobQueue.classList.remove('hidden');
-    elements.jobList.innerHTML = '';
-
-    // Create job items for each prompt
-    const jobs = prompts.map((prompt, index) => ({
-        prompt: prompt.trim(),
-        index,
-        status: 'pending',
-        taskId: null,
-        time: null,
-        startTime: null
-    }));
-
-    // Render initial job list
-    jobs.forEach(job => {
-        const jobEl = document.createElement('div');
-        jobEl.className = 'job-item';
-        jobEl.id = `job-${job.index}`;
-        jobEl.innerHTML = `
-            <span class="job-status pending"></span>
-            <span class="job-prompt">${job.prompt.substring(0, 50)}${job.prompt.length > 50 ? '...' : ''}</span>
-            <span class="job-time">-</span>
-        `;
-        elements.jobList.appendChild(jobEl);
-    });
-
-    function updateJobStatus(index, status, time = null) {
-        const job = jobs[index];
-        job.status = status;
-
-        const jobEl = document.getElementById(`job-${index}`);
-        if (jobEl) {
-            const statusEl = jobEl.querySelector('.job-status');
-            statusEl.className = `job-status ${status}`;
-
-            if (time !== null) {
-                const timeEl = jobEl.querySelector('.job-time');
-                timeEl.textContent = `${time.toFixed(1)}s`;
-            }
         }
-
-        // Update running count
-        const runningCount = jobs.filter(j => j.status === 'running').length;
-        const createdCount = jobs.filter(j => j.taskId !== null).length;
-        elements.jobQueueCount.textContent = `${runningCount} running, ${createdCount} created`;
-    }
-
-    // Use dynamic parameters from workflow if available
-    const dynamicParams = collectParameterValues();
-
-    let created = 0;
-    let createFailed = 0;
-    let completed = 0;
-    let fetchFailed = 0;
-    let totalTime = 0;
-    const times = [];
-    const createdTaskIds = [];
-
-    // PHASE 1: Create all tasks (slow, careful)
-    console.log('📝 Phase 1: Creating tasks...');
-    elements.jobQueueCount.textContent = 'Creating tasks...';
-
-    const CREATE_BATCH_SIZE = 3; // Small batches to avoid refused streams
-    const CREATE_DELAY_MS = 1000; // 1 second between batches
-
-    for (let i = 0; i < jobs.length; i += CREATE_BATCH_SIZE) {
-        const batch = jobs.slice(i, i + CREATE_BATCH_SIZE);
-
-        const createPromises = batch.map(async (job) => {
-            job.startTime = Date.now();
-            updateJobStatus(job.index, 'running');
-
-            try {
-                const nodeInfoList = [
-                    { nodeId: promptNodeId, fieldName: 'text', fieldValue: job.prompt },
-                    { nodeId: seedNodeId, fieldName: 'seed', fieldValue: randomSeed().toString() }
-                ];
-
-                // Add size if configured
-                const sizeNodeId = elements.sizeNodeId.value.trim();
-                if (sizeNodeId) {
-                    const width = parseInt(elements.widthInput.value) || 1920;
-                    const height = parseInt(elements.heightInput.value) || 1080;
-                    nodeInfoList.push({ nodeId: sizeNodeId, fieldName: 'width', fieldValue: width.toString() });
-                    nodeInfoList.push({ nodeId: sizeNodeId, fieldName: 'height', fieldValue: height.toString() });
-                }
-
-                const taskResult = await createTask(workflowId, nodeInfoList);
-                job.taskId = taskResult.taskId;
-                createdTaskIds.push(taskResult.taskId);
-                created++;
-                console.log(`✅ Task ${job.index} created: ${job.taskId}`);
-                return { success: true, job };
-            } catch (error) {
-                console.error(`❌ Task ${job.index} create failed:`, error.message);
-                updateJobStatus(job.index, 'failed');
-                createFailed++;
-                return { success: false, job, error: error.message };
-            }
-        });
-
-        await Promise.all(createPromises);
-
-        // Update stats after each batch
-        elements.statCompleted.textContent = `${created} created`;
-        elements.statFailed.textContent = createFailed;
-
-        // Delay between batches
-        if (i + CREATE_BATCH_SIZE < jobs.length) {
-            await new Promise(r => setTimeout(r, CREATE_DELAY_MS));
-        }
-    }
-
-    console.log(`📝 Phase 1 complete: ${created} tasks created, ${createFailed} failed`);
-
-    // Auto-fill task IDs for import
-    if (createdTaskIds.length > 0) {
-        elements.taskIds.value = createdTaskIds.join('\n');
-    }
-
-    // PHASE 2: Poll for results
-    console.log('🔄 Phase 2: Fetching results...');
-    elements.jobQueueCount.textContent = 'Fetching results...';
-
-    const FETCH_BATCH_SIZE = 5;
-    const FETCH_DELAY_MS = 500;
-
-    const pendingJobs = jobs.filter(j => j.taskId !== null);
-    const failedFetches = []; // Queue for retry
-
-    for (let i = 0; i < pendingJobs.length; i += FETCH_BATCH_SIZE) {
-        const batch = pendingJobs.slice(i, i + FETCH_BATCH_SIZE);
-
-        const fetchPromises = batch.map(async (job) => {
-            try {
-                const outputs = await pollForCompletion(job.taskId);
-
-                const elapsedTime = (Date.now() - job.startTime) / 1000;
-                job.time = elapsedTime;
-                times.push(elapsedTime);
-                totalTime += elapsedTime;
-
-                updateJobStatus(job.index, 'success', elapsedTime);
-                completed++;
-
-                // Add result images
-                for (const output of outputs) {
-                    addResultImage(output.fileUrl, output.fileType, elapsedTime / outputs.length);
-                }
-
-                return { success: true };
-            } catch (error) {
-                console.error(`❌ Task ${job.index} fetch failed:`, error.message);
-                // Don't mark as failed yet, queue for retry
-                failedFetches.push(job);
-                return { success: false };
-            }
-        });
-
-        await Promise.all(fetchPromises);
-
-        // Update stats
-        elements.statCompleted.textContent = completed;
-        elements.statFailed.textContent = createFailed + fetchFailed;
-
-        if (times.length > 0) {
-            elements.statAvgTime.textContent = `${(totalTime / times.length).toFixed(1)}s`;
-        }
-
-        // Delay between batches
-        if (i + FETCH_BATCH_SIZE < pendingJobs.length) {
-            await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
-        }
-    }
-
-    // PHASE 3: Retry failed fetches
-    if (failedFetches.length > 0) {
-        console.log(`🔄 Phase 3: Retrying ${failedFetches.length} failed fetches...`);
-        elements.jobQueueCount.textContent = `Retrying ${failedFetches.length}...`;
-
-        // Wait a bit before retrying
-        await new Promise(r => setTimeout(r, 3000));
-
-        for (const job of failedFetches) {
-            try {
-                console.log(`🔄 Retrying task ${job.index}: ${job.taskId}`);
-                const outputs = await pollForCompletion(job.taskId);
-
-                const elapsedTime = (Date.now() - job.startTime) / 1000;
-                job.time = elapsedTime;
-                times.push(elapsedTime);
-                totalTime += elapsedTime;
-
-                updateJobStatus(job.index, 'success', elapsedTime);
-                completed++;
-
-                for (const output of outputs) {
-                    addResultImage(output.fileUrl, output.fileType, elapsedTime / outputs.length);
-                }
-
-            } catch (error) {
-                console.error(`❌ Retry failed for task ${job.index}:`, error.message);
-                updateJobStatus(job.index, 'failed');
-                fetchFailed++;
-            }
-
-            // Update stats
-            elements.statCompleted.textContent = completed;
-            elements.statFailed.textContent = createFailed + fetchFailed;
-
-            if (times.length > 0) {
-                elements.statAvgTime.textContent = `${(totalTime / times.length).toFixed(1)}s`;
-            }
-
-            // Small delay between retries
-            await new Promise(r => setTimeout(r, 500));
-        }
-    }
-
-    // Update final count
-    console.log(`✅ Complete: ${completed} success, ${createFailed + fetchFailed} failed`);
-    elements.jobQueueCount.textContent = 'Done';
-
-    state.isStressTesting = false;
-    elements.stressTestBtn.disabled = false;
-    elements.generateBtn.disabled = false;
-}
-
-// ===== Import Tasks =====
-
-async function importTasks() {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        elements.settingsModal.classList.remove('hidden');
-        return;
-    }
-
-    const taskIdsText = elements.taskIds.value.trim();
-    if (!taskIdsText) {
-        alert('Please enter at least one Task ID');
-        return;
-    }
-
-    const taskIds = taskIdsText.split('\n').map(id => id.trim()).filter(id => id);
-    if (taskIds.length === 0) {
-        alert('Please enter valid Task IDs');
-        return;
-    }
-
-    elements.importBtn.disabled = true;
-    elements.importStatus.classList.remove('hidden');
-
-    let fetched = 0;
-    let failed = 0;
-
-    for (const taskId of taskIds) {
-        try {
-            elements.importProgress.textContent = `${fetched + failed + 1}/${taskIds.length}`;
-
-            const result = await getTaskOutputs(taskId);
-
-            if (result.code === 0 && result.data) {
-                for (const output of result.data) {
-                    addResultImage(output.fileUrl, output.fileType);
-                }
-                fetched++;
-            } else {
-                console.warn(`Task ${taskId} not ready or failed:`, result.msg);
-                failed++;
-            }
-
-            // Small delay between requests
-            await new Promise(r => setTimeout(r, 200));
-
-        } catch (error) {
-            console.error(`Failed to fetch task ${taskId}:`, error.message);
-            failed++;
-        }
-    }
-
-    elements.importProgress.textContent = `${fetched}/${taskIds.length}`;
-    elements.importBtn.disabled = false;
-
-    if (failed > 0) {
-        alert(`Fetched ${fetched} tasks. ${failed} failed (may still be processing).`);
     }
 }
 
 // ===== Event Handlers =====
 
-// File Upload
-elements.uploadZone.addEventListener('click', () => {
-    elements.fileInput.click();
-});
-
-elements.fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) handleFileSelect(file);
-});
-
-// Drag and drop
-elements.uploadZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    elements.uploadZone.classList.add('drag-over');
-});
-
-elements.uploadZone.addEventListener('dragleave', () => {
-    elements.uploadZone.classList.remove('drag-over');
-});
-
-elements.uploadZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    elements.uploadZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-        handleFileSelect(file);
-    }
-});
-
-function handleFileSelect(file) {
-    state.uploadedFile = file;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        elements.previewImage.src = e.target.result;
-        elements.previewImage.classList.remove('hidden');
-        elements.clearBtn.classList.remove('hidden');
-        elements.uploadPlaceholder.classList.add('hidden');
-    };
-    reader.readAsDataURL(file);
-}
-
-elements.clearBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    state.uploadedFile = null;
-    state.uploadedFileName = null;
-    elements.previewImage.classList.add('hidden');
-    elements.clearBtn.classList.add('hidden');
-    elements.uploadPlaceholder.classList.remove('hidden');
-    elements.fileInput.value = '';
-});
-
 // Generate button
 elements.generateBtn.addEventListener('click', generate);
-
-// Stress test button
-elements.stressTestBtn.addEventListener('click', runStressTest);
-
-// Import toggle and button
-elements.importToggle.addEventListener('click', () => {
-    elements.importToggle.classList.toggle('open');
-    elements.importFields.classList.toggle('hidden');
-});
-
-elements.importBtn.addEventListener('click', importTasks);
 
 // Settings modal
 elements.settingsBtn.addEventListener('click', () => {
@@ -1275,11 +747,6 @@ elements.saveSettingsBtn.addEventListener('click', () => {
         elements.settingsModal.classList.add('hidden');
     }
 });
-
-// Profile management
-elements.profileSelect.addEventListener('change', loadSelectedProfile);
-elements.saveProfileBtn.addEventListener('click', saveCurrentProfile);
-elements.deleteProfileBtn.addEventListener('click', deleteSelectedProfile);
 
 // Import JSON modal
 elements.importJsonBtn.addEventListener('click', () => {
@@ -1324,11 +791,9 @@ document.addEventListener('keydown', (e) => {
     }
     if (e.key === 'Escape') {
         elements.settingsModal.classList.add('hidden');
+        elements.importJsonModal.classList.add('hidden');
     }
 });
-
-// Prompt counter
-elements.promptInput.addEventListener('input', updatePromptCounter);
 
 // ===== Initialization =====
 
@@ -1341,15 +806,8 @@ function init() {
         }
     }
 
-    // Initialize profiles dropdown
-    updateProfileDropdown();
-
-    // Initialize prompt counter
-    updatePromptCounter();
-
     console.log('🎨 RunningHub AI Studio initialized');
-    console.log('⚡ Stress Test feature enabled');
-    console.log('📂 Workflow Profiles enabled');
+    console.log('📋 Dynamic Workflow UI ready');
 }
 
 init();

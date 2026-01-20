@@ -23,44 +23,9 @@
         </header>
 
         <!-- Main Content -->
-        <main class="main-content">
-            <!-- Left Panel - Image Upload -->
-            <section class="upload-section">
-                <h2>Input Image</h2>
-                <div class="upload-zone" id="uploadZone">
-                    <div class="upload-placeholder" id="uploadPlaceholder">
-                        <span class="upload-icon">📁</span>
-                        <p>Drop image here</p>
-                        <p class="upload-hint">or click to browse</p>
-                    </div>
-                    <img class="preview-image hidden" id="previewImage" alt="Preview">
-                    <button class="clear-btn hidden" id="clearBtn">✕</button>
-                </div>
-                <input type="file" id="fileInput" accept="image/*" hidden>
-            </section>
-
-            <!-- Right Panel - Controls -->
-            <section class="controls-section">
-                <div class="control-group">
-                    <label for="promptInput">Prompt</label>
-                    <textarea id="promptInput" placeholder="Describe the image you want to generate..."></textarea>
-                    <div class="prompt-counter">
-                        <span id="charCount">0</span> characters • <span id="wordCount">0</span> words
-                    </div>
-                </div>
-
-                <!-- Workflow Profile Selector -->
-                <div class="control-group">
-                    <label>Workflow Profile</label>
-                    <div class="profile-row">
-                        <select id="profileSelect">
-                            <option value="">-- Select Profile --</option>
-                        </select>
-                        <button class="profile-btn save" id="saveProfileBtn" title="Save Current Settings">💾</button>
-                        <button class="profile-btn delete" id="deleteProfileBtn" title="Delete Profile">🗑️</button>
-                    </div>
-                </div>
-
+        <main class="main-content simple-layout">
+            <!-- Left Panel - Controls -->
+            <section class="controls-section full-width">
                 <div class="control-group">
                     <label for="workflowInput">Workflow ID</label>
                     <input type="text" id="workflowInput" value="2013462841914826753">
@@ -92,99 +57,34 @@
 
                 <!-- Status -->
                 <div class="status-container hidden" id="statusContainer">
-                    <div class="status-bar">
-                        <div class="status-progress" id="statusProgress"></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
                     </div>
-                    <p class="status-text" id="statusText">Initializing...</p>
-                    <p class="status-timer" id="statusTimer"></p>
+                    <div class="status-info">
+                        <span id="statusText">Processing...</span>
+                        <span id="statusTimer">0.0s</span>
+                    </div>
                 </div>
             </section>
 
-            <!-- Stress Test Section -->
-            <section class="stress-section">
-                <h2>⚡ Stress Test (Batch)</h2>
-                <div class="control-group">
-                    <label for="batchPrompts">Multiple Prompts (one per line)</label>
-                    <textarea id="batchPrompts" placeholder="Prompt 1&#10;Prompt 2&#10;Prompt 3&#10;..."
-                        rows="5"></textarea>
-                </div>
-                <div class="stress-controls">
-                    <div class="control-group compact">
-                        <label for="concurrencyInput">Concurrency</label>
-                        <input type="number" id="concurrencyInput" value="3" min="1" max="10">
-                    </div>
-                    <button class="stress-btn" id="stressTestBtn">
-                        <span>🔥</span> Run Stress Test
-                    </button>
-                </div>
-                <div class="stress-stats hidden" id="stressStats">
-                    <div class="stat-item">
-                        <span class="stat-label">Total</span>
-                        <span class="stat-value" id="statTotal">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Completed</span>
-                        <span class="stat-value" id="statCompleted">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Failed</span>
-                        <span class="stat-value" id="statFailed">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Avg Time</span>
-                        <span class="stat-value" id="statAvgTime">-</span>
+            <!-- Right Panel - Results -->
+            <section class="results-section">
+                <div class="results-header">
+                    <h2>Results</h2>
+                    <div class="results-stats">
+                        <span id="totalResults">0 images</span>
+                        <span class="separator">•</span>
+                        <span id="totalTime">0s total</span>
                     </div>
                 </div>
-                <!-- Job Queue Display -->
-                <div class="job-queue hidden" id="jobQueue">
-                    <div class="job-queue-header">
-                        <span>📋 Job Queue</span>
-                        <span id="jobQueueCount">0 running</span>
-                    </div>
-                    <div class="job-list" id="jobList"></div>
-                </div>
-
-                <!-- Import Tasks -->
-                <div class="import-section">
-                    <label class="config-toggle" id="importToggle">
-                        <span>📥 Import Task Results</span>
-                        <span class="toggle-arrow">▼</span>
-                    </label>
-                    <div class="import-fields hidden" id="importFields">
-                        <div class="control-group">
-                            <label for="taskIds">Task IDs (one per line)</label>
-                            <textarea id="taskIds"
-                                placeholder="Paste task IDs from RunningHub dashboard...&#10;2013485069078141954&#10;2013485069078141955&#10;..."
-                                rows="4"></textarea>
-                        </div>
-                        <button class="import-btn" id="importBtn">
-                            <span>📥</span> Fetch Results
-                        </button>
-                        <div class="import-status hidden" id="importStatus">
-                            <span id="importProgress">0/0</span> fetched
-                        </div>
+                <div class="results-grid" id="resultsGrid">
+                    <div class="empty-state" id="emptyState">
+                        <span>✨</span>
+                        <p>Generated images will appear here</p>
                     </div>
                 </div>
             </section>
         </main>
-
-        <!-- Results Section -->
-        <section class="results-section">
-            <div class="results-header">
-                <h2>Results</h2>
-                <div class="results-stats">
-                    <span id="totalResults">0 images</span>
-                    <span class="separator">•</span>
-                    <span id="totalTime">0s total</span>
-                </div>
-            </div>
-            <div class="results-grid" id="resultsGrid">
-                <div class="empty-state" id="emptyState">
-                    <span>✨</span>
-                    <p>Generated images will appear here</p>
-                </div>
-            </div>
-        </section>
 
         <!-- Settings Modal -->
         <div class="modal hidden" id="settingsModal">
