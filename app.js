@@ -178,6 +178,13 @@ const PARAM_CONFIG = {
     seed: { type: 'number', random: true, label: 'Seed', priority: 5 },
     noise_seed: { type: 'number', random: true, label: 'Noise Seed', priority: 5 },
 
+    // Priority 5.5: Video Upscaler parameters (SeedVR2VideoUpscaler)
+    latent_noise_scale: { type: 'slider', min: 0, max: 1, step: 0.001, label: 'Latent Noise Scale', priority: 5.5, default: 0 },
+    input_noise_scale: { type: 'slider', min: 0, max: 1, step: 0.001, label: 'Input Noise Scale', priority: 5.5, default: 0 },
+    prepend_frames: { type: 'number', min: 0, max: 32, step: 1, label: 'Prepend Frames', priority: 5.5, default: 0 },
+    append_frames: { type: 'number', min: 0, max: 32, step: 1, label: 'Append Frames', priority: 5.5, default: 0 },
+    tile_overlap: { type: 'number', min: 0, max: 128, step: 1, label: 'Tile Overlap', priority: 5.5, default: 8 },
+
     // Priority 6: Sampler parameters
     steps: { type: 'slider', min: 1, max: 100, step: 1, label: 'Steps', priority: 6 },
     cfg: { type: 'slider', min: 1, max: 20, step: 0.5, label: 'CFG Scale', priority: 6 },
@@ -563,6 +570,31 @@ function collectParameterValues() {
 
             if (element) {
                 let value = element.type === 'checkbox' ? element.checked : element.value;
+
+                // Handle empty values for numeric types - use original value or default
+                if (value === '' || value === null || value === undefined) {
+                    // Use original value from workflow if available
+                    if (param.currentValue !== undefined && param.currentValue !== '') {
+                        value = param.currentValue;
+                    } else if (config.default !== undefined) {
+                        // Use configured default
+                        value = config.default;
+                    } else if (config.type === 'number' || config.type === 'slider') {
+                        // Use min or 0 as fallback for numeric fields
+                        value = config.min !== undefined ? config.min : 0;
+                    } else {
+                        // Skip empty text fields
+                        return;
+                    }
+                }
+
+                // Ensure proper type conversion for numeric fields
+                if (config.type === 'number' || config.type === 'slider') {
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                        value = numValue;
+                    }
+                }
 
                 // Always include all parameters (API needs complete nodeInfoList)
                 nodeInfoList.push({
