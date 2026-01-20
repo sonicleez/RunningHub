@@ -635,6 +635,59 @@ body {
     background: var(--bg-secondary);
 }
 
+/* Saved Workflows Section */
+.saved-workflows-section {
+    margin-bottom: 16px;
+}
+
+.saved-workflows-header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.saved-workflow-dropdown {
+    flex: 1;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.saved-workflow-dropdown:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.saved-workflow-dropdown option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.save-workflow-btn,
+.delete-workflow-btn {
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.save-workflow-btn:hover {
+    background: var(--accent-success);
+    border-color: var(--accent-success);
+}
+
+.delete-workflow-btn:hover {
+    background: var(--accent-error);
+    border-color: var(--accent-error);
+}
+
 /* Import Section Styles */
 .workflow-import-section {
     margin-bottom: 20px;

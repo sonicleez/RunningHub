@@ -34,7 +34,11 @@ const elements = {
     // Workflow params panel
     workflowParamsPanel: document.getElementById('workflowParamsPanel'),
     mainParamsContainer: document.getElementById('mainParamsContainer'),
-    clearParamsBtn: document.getElementById('clearParamsBtn')
+    clearParamsBtn: document.getElementById('clearParamsBtn'),
+    // Saved workflows
+    savedWorkflowSelect: document.getElementById('savedWorkflowSelect'),
+    saveWorkflowBtn: document.getElementById('saveWorkflowBtn'),
+    deleteWorkflowBtn: document.getElementById('deleteWorkflowBtn')
 };
 
 // State
@@ -49,6 +53,71 @@ let state = {
 // ===== Profile Management =====
 
 const PROFILES_KEY = 'runninghub_profiles';
+const SAVED_WORKFLOWS_KEY = 'runninghub_saved_workflows';
+
+// Get saved workflows from localStorage
+function getSavedWorkflows() {
+    try {
+        return JSON.parse(localStorage.getItem(SAVED_WORKFLOWS_KEY)) || {};
+    } catch {
+        return {};
+    }
+}
+
+// Save workflow to localStorage
+function saveWorkflow(name, workflowId, workflowJson) {
+    const workflows = getSavedWorkflows();
+    workflows[name] = {
+        id: workflowId,
+        json: workflowJson,
+        savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(SAVED_WORKFLOWS_KEY, JSON.stringify(workflows));
+    updateSavedWorkflowsDropdown();
+}
+
+// Delete saved workflow
+function deleteWorkflow(name) {
+    const workflows = getSavedWorkflows();
+    delete workflows[name];
+    localStorage.setItem(SAVED_WORKFLOWS_KEY, JSON.stringify(workflows));
+    updateSavedWorkflowsDropdown();
+}
+
+// Update dropdown with saved workflows
+function updateSavedWorkflowsDropdown() {
+    const select = elements.savedWorkflowSelect;
+    if (!select) return;
+
+    const workflows = getSavedWorkflows();
+    select.innerHTML = '<option value="">-- Saved Workflows --</option>';
+
+    Object.entries(workflows).forEach(([name, data]) => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+}
+
+// Load selected workflow
+function loadSavedWorkflow(name) {
+    const workflows = getSavedWorkflows();
+    const workflow = workflows[name];
+    if (!workflow) return;
+
+    // Set workflow ID
+    elements.workflowInput.value = workflow.id || '';
+
+    // If has JSON, parse and apply
+    if (workflow.json) {
+        const result = parseWorkflowForParameters(workflow.json);
+        if (result.success) {
+            applyDetectedNodes();
+            console.log(`✅ Loaded workflow: ${name}`);
+        }
+    }
+}
 
 // ===== Dynamic Parameter Editor =====
 
@@ -952,6 +1021,41 @@ elements.applyNodesBtn.addEventListener('click', applyDetectedNodes);
 // Clear workflow params
 elements.clearParamsBtn.addEventListener('click', clearWorkflowParams);
 
+// Saved workflows
+elements.savedWorkflowSelect.addEventListener('change', (e) => {
+    if (e.target.value) {
+        loadSavedWorkflow(e.target.value);
+    }
+});
+
+elements.saveWorkflowBtn.addEventListener('click', () => {
+    const workflowId = elements.workflowInput.value.trim();
+    if (!workflowId && !workflowData) {
+        alert('Please enter a Workflow ID or import a workflow first');
+        return;
+    }
+
+    const name = prompt('Enter a name for this workflow:', `Workflow ${workflowId.slice(-6)}`);
+    if (name) {
+        const jsonStr = workflowData ? JSON.stringify(workflowData) : '';
+        saveWorkflow(name, workflowId, jsonStr);
+        alert(`Workflow "${name}" saved!`);
+    }
+});
+
+elements.deleteWorkflowBtn.addEventListener('click', () => {
+    const selectedName = elements.savedWorkflowSelect.value;
+    if (!selectedName) {
+        alert('Please select a workflow to delete');
+        return;
+    }
+
+    if (confirm(`Delete workflow "${selectedName}"?`)) {
+        deleteWorkflow(selectedName);
+        elements.savedWorkflowSelect.value = '';
+    }
+});
+
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {
@@ -973,6 +1077,9 @@ function init() {
             setApiKey(envKey);
         }
     }
+
+    // Load saved workflows dropdown
+    updateSavedWorkflowsDropdown();
 
     console.log('🎨 RunningHub AI Studio initialized');
     console.log('📋 Dynamic Workflow UI ready');
