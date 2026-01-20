@@ -397,6 +397,13 @@ function collectParameterValues() {
     editableParameters.forEach(nodeGroup => {
         nodeGroup.params.forEach(param => {
             const inputId = `param-${param.nodeId}-${param.fieldName}`;
+            const config = PARAM_CONFIG[param.fieldName] || { type: 'text' };
+
+            // Skip image fields - they are handled separately
+            if (config.type === 'image') {
+                return;
+            }
+
             const element = document.getElementById(inputId);
 
             if (element) {
@@ -415,6 +422,30 @@ function collectParameterValues() {
     });
 
     return nodeInfoList;
+}
+
+// Upload all images and get their filenames
+async function uploadDynamicImages() {
+    const imageParams = [];
+
+    for (const [key, file] of Object.entries(uploadedImages)) {
+        const [nodeId, fieldName] = key.split('-');
+        try {
+            console.log(`📤 Uploading image for Node ${nodeId}.${fieldName}...`);
+            const result = await uploadFile(file);
+            imageParams.push({
+                nodeId: nodeId,
+                fieldName: fieldName,
+                fieldValue: result.fileName
+            });
+            console.log(`✅ Uploaded: ${result.fileName}`);
+        } catch (error) {
+            console.error(`❌ Failed to upload image for Node ${nodeId}:`, error);
+            throw new Error(`Image upload failed for Node ${nodeId}: ${error.message}`);
+        }
+    }
+
+    return imageParams;
 }
 
 function applyDetectedNodes() {
@@ -739,6 +770,13 @@ async function generate() {
 
         // Build nodeInfoList from dynamic parameters
         const nodeInfoList = collectParameterValues();
+
+        // Upload images and add to nodeInfoList
+        if (Object.keys(uploadedImages).length > 0) {
+            updateStatus(10, 'Uploading images...');
+            const imageParams = await uploadDynamicImages();
+            nodeInfoList.push(...imageParams);
+        }
 
         // Add prompt if provided (from main input)
         const prompt = elements.promptInput.value.trim();
