@@ -72,7 +72,11 @@ const elements = {
     closeImportBtn: document.getElementById('closeImportBtn'),
     workflowJson: document.getElementById('workflowJson'),
     analyzeJsonBtn: document.getElementById('analyzeJsonBtn'),
-    applyNodesBtn: document.getElementById('applyNodesBtn')
+    applyNodesBtn: document.getElementById('applyNodesBtn'),
+    // Workflow params panel
+    workflowParamsPanel: document.getElementById('workflowParamsPanel'),
+    mainParamsContainer: document.getElementById('mainParamsContainer'),
+    clearParamsBtn: document.getElementById('clearParamsBtn')
 };
 
 // State
@@ -411,11 +415,49 @@ function applyDetectedNodes() {
     // Close modal
     document.getElementById('importJsonModal').classList.add('hidden');
 
-    // Show message about parameters
-    if (editableParameters.length > 0) {
-        console.log(`✅ Loaded ${editableParameters.length} nodes with editable parameters`);
-        alert(`Loaded ${editableParameters.length} node groups with editable parameters.\n\nModify values in the panel, then click Generate.`);
+    if (editableParameters.length === 0) {
+        alert('No editable parameters found');
+        return;
     }
+
+    // Render parameters to main panel
+    const container = document.getElementById('mainParamsContainer');
+    container.innerHTML = '';
+
+    editableParameters.forEach(nodeGroup => {
+        const nodeCard = document.createElement('div');
+        nodeCard.className = 'param-node-card';
+
+        let paramsHtml = '';
+        nodeGroup.params.forEach(param => {
+            paramsHtml += renderParamInput(param);
+        });
+
+        nodeCard.innerHTML = `
+            <div class="param-node-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span class="param-node-title">Node ${nodeGroup.nodeId}: ${nodeGroup.title}</span>
+                <span class="param-toggle">▼</span>
+            </div>
+            <div class="param-node-body">
+                ${paramsHtml}
+            </div>
+        `;
+
+        container.appendChild(nodeCard);
+    });
+
+    // Show the panel
+    document.getElementById('workflowParamsPanel').classList.remove('hidden');
+
+    console.log(`✅ Loaded ${editableParameters.length} nodes with editable parameters`);
+}
+
+function clearWorkflowParams() {
+    editableParameters = [];
+    workflowData = null;
+    document.getElementById('mainParamsContainer').innerHTML = '';
+    document.getElementById('workflowParamsPanel').classList.add('hidden');
+    console.log('🗑️ Workflow parameters cleared');
 }
 
 // ===== Timer Functions =====
@@ -1270,6 +1312,9 @@ elements.analyzeJsonBtn.addEventListener('click', () => {
 });
 
 elements.applyNodesBtn.addEventListener('click', applyDetectedNodes);
+
+// Clear workflow params
+elements.clearParamsBtn.addEventListener('click', clearWorkflowParams);
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
