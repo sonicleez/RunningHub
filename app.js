@@ -57,14 +57,15 @@ let editableParameters = [];
 let workflowData = null;
 let uploadedImages = {}; // Store uploaded images by nodeId-fieldName
 
-// Nodes to skip (system/loader nodes - but NOT LoadImage)
+// Nodes to skip (system/loader nodes - but NOT LoadImage, LoraLoader)
 const SKIP_NODE_TYPES = [
     'UNETLoader', 'CLIPLoader', 'VAELoader', 'CheckpointLoaderSimple',
-    'LoraLoader', 'LoraLoaderModelOnly', 'ControlNetLoader',
+    'ControlNetLoader',
     'SaveImage', 'PreviewImage', 'PreviewAny', 'VAEDecode', 'VAEEncode',
     'ConditioningZeroOut', 'ImageConcanate', 'SeedVR2BlockSwap', 'SeedVR2ExtraArgs',
     'LayerUtility: PurgeVRAM V2', 'ImageScaleToTotalPixels'
     // LoadImage is NOT skipped - we want to detect it for file uploads
+    // LoraLoader is NOT skipped - we want to allow LoRA selection
 ];
 
 // Parameter configurations with priority (lower = show first)
@@ -80,6 +81,11 @@ const PARAM_CONFIG = {
     // Priority 2: Text/Prompt parameters
     text: { type: 'textarea', label: 'Text/Prompt', priority: 2 },
     prompt: { type: 'textarea', label: 'Prompt', priority: 2 },
+
+    // Priority 2.5: LoRA parameters (important for style)
+    lora_name: { type: 'lora', label: 'LoRA Model', priority: 2.5 },
+    strength_model: { type: 'slider', min: 0, max: 2, step: 0.05, label: 'LoRA Strength (Model)', priority: 2.5 },
+    strength_clip: { type: 'slider', min: 0, max: 2, step: 0.05, label: 'LoRA Strength (CLIP)', priority: 2.5 },
 
     // Priority 3: Size parameters
     width: { type: 'number', min: 64, max: 4096, step: 64, label: 'Width', priority: 3 },
@@ -108,9 +114,11 @@ const PARAM_CONFIG = {
     camera_view: { type: 'checkbox', label: 'Camera View', priority: 7 }
 };
 
-// Node type priority (LoadImage first, then prompt nodes, then others)
+// Node type priority (LoadImage first, then LoRA, then prompt nodes, then others)
 const NODE_PRIORITY = {
     'LoadImage': 1,
+    'LoraLoader': 1.5,
+    'LoraLoaderModelOnly': 1.5,
     'CLIPTextEncode': 2,
     'TextEncodeQwenImageEditPlus': 2,
     'QwenMultiangleCameraNode': 3,
@@ -280,6 +288,20 @@ function renderParamInput(param) {
 
         case 'file':
             inputHtml = `<input type="text" id="${inputId}" value="${currentValue || ''}" placeholder="File path">`;
+            break;
+
+        case 'lora':
+            // LoRA selector - shows current value and allows editing path
+            inputHtml = `
+                <div class="lora-input-field">
+                    <input type="text" id="${inputId}" value="${currentValue || ''}" 
+                           placeholder="loras/your-lora.safetensors"
+                           class="lora-path-input">
+                    <div class="lora-hint">
+                        <small>📌 Path trên RunningHub server (vd: loras/style.safetensors)</small>
+                    </div>
+                </div>
+            `;
             break;
 
         default:
