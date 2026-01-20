@@ -287,14 +287,12 @@ function collectParameterValues() {
             if (element) {
                 let value = element.type === 'checkbox' ? element.checked : element.value;
 
-                // Only add if value changed from original
-                if (String(value) !== String(param.currentValue)) {
-                    nodeInfoList.push({
-                        nodeId: param.nodeId,
-                        fieldName: param.fieldName,
-                        fieldValue: String(value)
-                    });
-                }
+                // Always include all parameters (API needs complete nodeInfoList)
+                nodeInfoList.push({
+                    nodeId: param.nodeId,
+                    fieldName: param.fieldName,
+                    fieldValue: String(value)
+                });
             }
         });
     });
@@ -675,43 +673,6 @@ async function generate() {
         showError(error.message);
     } finally {
         setGenerating(false);
-    }
-}
-
-// ===== Stress Test =====
-
-async function runSingleTask(workflowId, prompt, index) {
-    const startTime = Date.now();
-
-    // Get configured node IDs
-    const promptNodeId = elements.promptNodeId.value.trim() || '6';
-    const seedNodeId = elements.seedNodeId.value.trim() || '3';
-
-    try {
-        const nodeInfoList = [
-            { nodeId: promptNodeId, fieldName: 'text', fieldValue: prompt },
-            { nodeId: seedNodeId, fieldName: 'seed', fieldValue: randomSeed().toString() }
-        ];
-
-        const taskResult = await createTask(workflowId, nodeInfoList);
-        const outputs = await pollForCompletion(taskResult.taskId);
-
-        const elapsedTime = (Date.now() - startTime) / 1000;
-
-        return {
-            success: true,
-            time: elapsedTime,
-            outputs,
-            prompt,
-            index
-        };
-    } catch (error) {
-        return {
-            success: false,
-            error: error.message,
-            prompt,
-            index
-        }
     }
 }
 
