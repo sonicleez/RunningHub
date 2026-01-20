@@ -146,8 +146,9 @@ function parseWorkflowForParameters(jsonText) {
                 // Skip connections (arrays like [nodeId, outputIndex])
                 if (Array.isArray(inputValue)) continue;
 
-                // Skip string paths for models/files (contain .safetensors, .png etc)
+                // Skip string paths for models/files EXCEPT lora_name (we want to edit that)
                 if (typeof inputValue === 'string' &&
+                    inputName !== 'lora_name' &&  // Allow lora_name to be editable
                     (inputValue.includes('.safetensors') ||
                         inputValue.includes('.ckpt') ||
                         inputValue.includes('.pt'))) continue;
