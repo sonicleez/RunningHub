@@ -66,67 +66,12 @@
                     <input type="text" id="workflowInput" value="2013462841914826753">
                 </div>
 
-                <!-- Node ID Configuration -->
-                <div class="node-config">
-                    <label class="config-toggle" id="configToggle">
-                        <span>⚙️ Node IDs</span>
-                        <span class="toggle-arrow">▼</span>
-                    </label>
-                    <div class="config-fields hidden" id="configFields">
-                        <div class="config-row">
-                            <div class="config-field">
-                                <label for="promptNodeId">Prompt Node</label>
-                                <input type="text" id="promptNodeId" value="5" placeholder="e.g. 5">
-                            </div>
-                            <div class="config-field">
-                                <label for="seedNodeId">Seed Node</label>
-                                <input type="text" id="seedNodeId" value="4" placeholder="e.g. 4">
-                            </div>
-                            <div class="config-field">
-                                <label for="imageNodeId">Image Node</label>
-                                <input type="text" id="imageNodeId" value="1" placeholder="e.g. 1">
-                            </div>
-                        </div>
-                        <div class="config-actions">
-                            <p class="config-hint">💡 Paste workflow JSON để tự động detect nodeId</p>
-                            <button class="import-json-btn" id="importJsonBtn">📋 Import Workflow JSON</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="control-group">
-                    <label for="seedInput">Seed (optional)</label>
-                    <div class="seed-row">
-                        <input type="number" id="seedInput" placeholder="Random">
-                        <button class="randomize-btn" id="randomizeBtn" title="Randomize">🎲</button>
-                    </div>
-                </div>
-
-                <!-- Image Size Controls -->
-                <div class="control-group">
-                    <label>Image Size</label>
-                    <div class="size-presets">
-                        <button class="preset-btn" data-width="1920" data-height="1080">16:9</button>
-                        <button class="preset-btn" data-width="1080" data-height="1920">9:16</button>
-                        <button class="preset-btn" data-width="1024" data-height="1024">1:1</button>
-                        <button class="preset-btn" data-width="1280" data-height="720">HD</button>
-                        <button class="preset-btn active" data-width="1920" data-height="1080">FHD</button>
-                    </div>
-                    <div class="size-inputs">
-                        <div class="size-field">
-                            <label for="widthInput">W</label>
-                            <input type="number" id="widthInput" value="1920" min="512" max="2048" step="64">
-                        </div>
-                        <span class="size-separator">×</span>
-                        <div class="size-field">
-                            <label for="heightInput">H</label>
-                            <input type="number" id="heightInput" value="1080" min="512" max="2048" step="64">
-                        </div>
-                        <div class="size-field">
-                            <label for="sizeNodeId">Node</label>
-                            <input type="text" id="sizeNodeId" value="7" placeholder="7">
-                        </div>
-                    </div>
+                <!-- Dynamic Workflow Import -->
+                <div class="workflow-import-section">
+                    <button class="import-json-btn primary" id="importJsonBtn">
+                        📋 Import Workflow JSON
+                    </button>
+                    <p class="import-hint">Paste workflow JSON để tự động tạo UI controls</p>
                 </div>
 
                 <!-- Workflow Parameters Panel (shown after import) -->
@@ -262,25 +207,25 @@
     <!-- Import JSON Modal -->
     <div class="modal hidden" id="importJsonModal">
         <div class="modal-overlay">
-            <div class="modal-content modal-lg">
+            <div class="modal-content modal-lg modal-full-height">
                 <div class="modal-header">
                     <h3>📋 Import Workflow JSON</h3>
                     <button class="close-btn" id="closeImportBtn">✕</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body modal-scrollable">
                     <div class="control-group">
                         <label for="workflowJson">Paste Workflow JSON (API Format)</label>
-                        <textarea id="workflowJson" rows="10"
+                        <textarea id="workflowJson" rows="8"
                             placeholder='{"1": {"inputs": {...}, "class_type": "..."}, ...}'></textarea>
                     </div>
                     <div class="detected-nodes hidden" id="detectedNodes">
                         <h4>🔍 Detected Nodes:</h4>
                         <div id="detectedList"></div>
                     </div>
-                    <div class="modal-actions">
-                        <button class="analyze-btn" id="analyzeJsonBtn">🔍 Analyze Workflow</button>
-                        <button class="apply-btn" id="applyNodesBtn">✅ Apply to Settings</button>
-                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="analyze-btn" id="analyzeJsonBtn">🔍 Analyze Workflow</button>
+                    <button class="apply-btn" id="applyNodesBtn">✅ Apply to Settings</button>
                 </div>
             </div>
         </div>
