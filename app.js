@@ -195,14 +195,16 @@ function deleteSelectedProfile() {
 let detectedSettings = {};
 let editableParameters = [];
 let workflowData = null;
+let uploadedImages = {}; // Store uploaded images by nodeId-fieldName
 
-// Nodes to skip (system/loader nodes)
+// Nodes to skip (system/loader nodes - but NOT LoadImage)
 const SKIP_NODE_TYPES = [
     'UNETLoader', 'CLIPLoader', 'VAELoader', 'CheckpointLoaderSimple',
     'LoraLoader', 'LoraLoaderModelOnly', 'ControlNetLoader',
     'SaveImage', 'PreviewImage', 'PreviewAny', 'VAEDecode', 'VAEEncode',
     'ConditioningZeroOut', 'ImageConcanate', 'SeedVR2BlockSwap', 'SeedVR2ExtraArgs',
     'LayerUtility: PurgeVRAM V2', 'ImageScaleToTotalPixels'
+    // LoadImage is NOT skipped - we want to detect it for file uploads
 ];
 
 // Parameter configurations
@@ -230,11 +232,16 @@ const PARAM_CONFIG = {
     zoom: { type: 'slider', min: 0.1, max: 10, step: 0.1, label: 'Zoom' },
 
     // Text parameters
-    text: { type: 'textarea', label: 'Text' },
+    text: { type: 'textarea', label: 'Text/Prompt' },
     prompt: { type: 'textarea', label: 'Prompt' },
 
-    // Image parameters
-    image: { type: 'file', label: 'Image' },
+    // Image parameters - now with file upload
+    image: { type: 'image', label: 'Image' },
+    image1: { type: 'image', label: 'Image 1' },
+    image2: { type: 'image', label: 'Image 2' },
+    image3: { type: 'image', label: 'Image 3' },
+    image4: { type: 'image', label: 'Image 4' },
+    image5: { type: 'image', label: 'Image 5' },
 
     // Boolean parameters
     default_prompts: { type: 'checkbox', label: 'Default Prompts' },
@@ -369,8 +376,25 @@ function renderParamInput(param) {
             inputHtml = `<input type="checkbox" id="${inputId}" ${currentValue ? 'checked' : ''}>`;
             break;
 
+        case 'image':
+            inputHtml = `
+                <div class="image-upload-field" id="${inputId}-container">
+                    <input type="file" id="${inputId}" accept="image/*" style="display:none" 
+                           onchange="handleImageUpload('${nodeId}', '${fieldName}', this)">
+                    <div class="image-upload-area" onclick="document.getElementById('${inputId}').click()">
+                        <div class="upload-placeholder" id="${inputId}-placeholder">
+                            <span class="upload-icon">📁</span>
+                            <span class="upload-text">Click to upload</span>
+                        </div>
+                        <img id="${inputId}-preview" class="upload-preview hidden" />
+                    </div>
+                    <span class="image-filename" id="${inputId}-name">${currentValue || 'No file'}</span>
+                </div>
+            `;
+            break;
+
         case 'file':
-            inputHtml = `<input type="text" id="${inputId}" value="${currentValue || ''}" placeholder="File path or upload">`;
+            inputHtml = `<input type="text" id="${inputId}" value="${currentValue || ''}" placeholder="File path">`;
             break;
 
         default:
@@ -378,7 +402,7 @@ function renderParamInput(param) {
     }
 
     return `
-        <div class="param-row">
+        <div class="param-row ${config.type === 'image' ? 'param-row-image' : ''}">
             <label for="${inputId}">${config.label}</label>
             <div class="param-input">${inputHtml}</div>
         </div>
@@ -455,9 +479,36 @@ function applyDetectedNodes() {
 function clearWorkflowParams() {
     editableParameters = [];
     workflowData = null;
+    uploadedImages = {};
     document.getElementById('mainParamsContainer').innerHTML = '';
     document.getElementById('workflowParamsPanel').classList.add('hidden');
     console.log('🗑️ Workflow parameters cleared');
+}
+
+// Handle image upload for dynamic parameters
+function handleImageUpload(nodeId, fieldName, input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const inputId = `param-${nodeId}-${fieldName}`;
+    const preview = document.getElementById(`${inputId}-preview`);
+    const placeholder = document.getElementById(`${inputId}-placeholder`);
+    const filename = document.getElementById(`${inputId}-name`);
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+
+    // Store file for upload
+    uploadedImages[`${nodeId}-${fieldName}`] = file;
+    filename.textContent = file.name;
+
+    console.log(`📁 Image uploaded for Node ${nodeId}.${fieldName}: ${file.name}`);
 }
 
 // ===== Timer Functions =====

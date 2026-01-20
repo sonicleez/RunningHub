@@ -795,6 +795,71 @@ body {
     background: var(--accent-primary);
 }
 
+/* ===== Image Upload Fields ===== */
+.param-row-image {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.param-row-image .param-input {
+    width: 100%;
+}
+
+.image-upload-field {
+    width: 100%;
+}
+
+.image-upload-area {
+    width: 100%;
+    height: 120px;
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--bg-tertiary);
+    overflow: hidden;
+}
+
+.image-upload-area:hover {
+    border-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+}
+
+.upload-icon {
+    font-size: 28px;
+}
+
+.upload-text {
+    font-size: 12px;
+}
+
+.upload-preview {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.image-filename {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
 /* ===== Status ===== */
 .status-container {
     margin-top: 20px;
