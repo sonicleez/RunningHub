@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RunningHub AI Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🎨</span>
+                <h1>RunningHub AI Studio</h1>
+            </div>
+            <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel - Image Upload -->
+            <section class="upload-section">
+                <h2>Input Image</h2>
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-placeholder" id="uploadPlaceholder">
+                        <span class="upload-icon">📁</span>
+                        <p>Drop image here</p>
+                        <p class="upload-hint">or click to browse</p>
+                    </div>
+                    <img class="preview-image hidden" id="previewImage" alt="Preview">
+                    <button class="clear-btn hidden" id="clearBtn">✕</button>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+            </section>
+
+            <!-- Right Panel - Controls -->
+            <section class="controls-section">
+                <div class="control-group">
+                    <label for="promptInput">Prompt</label>
+                    <textarea id="promptInput" placeholder="Describe the image you want to generate..."></textarea>
+                    <div class="prompt-counter">
+                        <span id="charCount">0</span> characters • <span id="wordCount">0</span> words
+                    </div>
+                </div>
+
+                <!-- Workflow Profile Selector -->
+                <div class="control-group">
+                    <label>Workflow Profile</label>
+                    <div class="profile-row">
+                        <select id="profileSelect">
+                            <option value="">-- Select Profile --</option>
+                        </select>
+                        <button class="profile-btn save" id="saveProfileBtn" title="Save Current Settings">💾</button>
+                        <button class="profile-btn delete" id="deleteProfileBtn" title="Delete Profile">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="workflowInput">Workflow ID</label>
+                    <input type="text" id="workflowInput" value="2013462841914826753">
+                </div>
+
+                <!-- Node ID Configuration -->
+                <div class="node-config">
+                    <label class="config-toggle" id="configToggle">
+                        <span>⚙️ Node IDs</span>
+                        <span class="toggle-arrow">▼</span>
+                    </label>
+                    <div class="config-fields hidden" id="configFields">
+                        <div class="config-row">
+                            <div class="config-field">
+                                <label for="promptNodeId">Prompt Node</label>
+                                <input type="text" id="promptNodeId" value="5" placeholder="e.g. 5">
+                            </div>
+                            <div class="config-field">
+                                <label for="seedNodeId">Seed Node</label>
+                                <input type="text" id="seedNodeId" value="4" placeholder="e.g. 4">
+                            </div>
+                            <div class="config-field">
+                                <label for="imageNodeId">Image Node</label>
+                                <input type="text" id="imageNodeId" value="1" placeholder="e.g. 1">
+                            </div>
+                        </div>
+                        <div class="config-actions">
+                            <p class="config-hint">💡 Paste workflow JSON để tự động detect nodeId</p>
+                            <button class="import-json-btn" id="importJsonBtn">📋 Import Workflow JSON</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="seedInput">Seed (optional)</label>
+                    <div class="seed-row">
+                        <input type="number" id="seedInput" placeholder="Random">
+                        <button class="randomize-btn" id="randomizeBtn" title="Randomize">🎲</button>
+                    </div>
+                </div>
+
+                <!-- Image Size Controls -->
+                <div class="control-group">
+                    <label>Image Size</label>
+                    <div class="size-presets">
+                        <button class="preset-btn" data-width="1920" data-height="1080">16:9</button>
+                        <button class="preset-btn" data-width="1080" data-height="1920">9:16</button>
+                        <button class="preset-btn" data-width="1024" data-height="1024">1:1</button>
+                        <button class="preset-btn" data-width="1280" data-height="720">HD</button>
+                        <button class="preset-btn active" data-width="1920" data-height="1080">FHD</button>
+                    </div>
+                    <div class="size-inputs">
+                        <div class="size-field">
+                            <label for="widthInput">W</label>
+                            <input type="number" id="widthInput" value="1920" min="512" max="2048" step="64">
+                        </div>
+                        <span class="size-separator">×</span>
+                        <div class="size-field">
+                            <label for="heightInput">H</label>
+                            <input type="number" id="heightInput" value="1080" min="512" max="2048" step="64">
+                        </div>
+                        <div class="size-field">
+                            <label for="sizeNodeId">Node</label>
+                            <input type="text" id="sizeNodeId" value="7" placeholder="7">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="generate-btn" id="generateBtn">
+                    <span class="btn-icon">🚀</span>
+                    <span class="btn-text">Generate</span>
+                </button>
+
+                <!-- Status -->
+                <div class="status-container hidden" id="statusContainer">
+                    <div class="status-bar">
+                        <div class="status-progress" id="statusProgress"></div>
+                    </div>
+                    <p class="status-text" id="statusText">Initializing...</p>
+                    <p class="status-timer" id="statusTimer"></p>
+                </div>
+            </section>
+
+            <!-- Stress Test Section -->
+            <section class="stress-section">
+                <h2>⚡ Stress Test (Batch)</h2>
+                <div class="control-group">
+                    <label for="batchPrompts">Multiple Prompts (one per line)</label>
+                    <textarea id="batchPrompts" placeholder="Prompt 1&#10;Prompt 2&#10;Prompt 3&#10;..."
+                        rows="5"></textarea>
+                </div>
+                <div class="stress-controls">
+                    <div class="control-group compact">
+                        <label for="concurrencyInput">Concurrency</label>
+                        <input type="number" id="concurrencyInput" value="3" min="1" max="10">
+                    </div>
+                    <button class="stress-btn" id="stressTestBtn">
+                        <span>🔥</span> Run Stress Test
+                    </button>
+                </div>
+                <div class="stress-stats hidden" id="stressStats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total</span>
+                        <span class="stat-value" id="statTotal">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Completed</span>
+                        <span class="stat-value" id="statCompleted">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Failed</span>
+                        <span class="stat-value" id="statFailed">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Avg Time</span>
+                        <span class="stat-value" id="statAvgTime">-</span>
+                    </div>
+                </div>
+                <!-- Job Queue Display -->
+                <div class="job-queue hidden" id="jobQueue">
+                    <div class="job-queue-header">
+                        <span>📋 Job Queue</span>
+                        <span id="jobQueueCount">0 running</span>
+                    </div>
+                    <div class="job-list" id="jobList"></div>
+                </div>
+
+                <!-- Import Tasks -->
+                <div class="import-section">
+                    <label class="config-toggle" id="importToggle">
+                        <span>📥 Import Task Results</span>
+                        <span class="toggle-arrow">▼</span>
+                    </label>
+                    <div class="import-fields hidden" id="importFields">
+                        <div class="control-group">
+                            <label for="taskIds">Task IDs (one per line)</label>
+                            <textarea id="taskIds"
+                                placeholder="Paste task IDs from RunningHub dashboard...&#10;2013485069078141954&#10;2013485069078141955&#10;..."
+                                rows="4"></textarea>
+                        </div>
+                        <button class="import-btn" id="importBtn">
+                            <span>📥</span> Fetch Results
+                        </button>
+                        <div class="import-status hidden" id="importStatus">
+                            <span id="importProgress">0/0</span> fetched
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Results Section -->
+        <section class="results-section">
+            <div class="results-header">
+                <h2>Results</h2>
+                <div class="results-stats">
+                    <span id="totalResults">0 images</span>
+                    <span class="separator">•</span>
+                    <span id="totalTime">0s total</span>
+                </div>
+            </div>
+            <div class="results-grid" id="resultsGrid">
+                <div class="empty-state" id="emptyState">
+                    <span>✨</span>
+                    <p>Generated images will appear here</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Modal -->
+        <div class="modal hidden" id="settingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button class="close-btn" id="closeModalBtn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="control-group">
+                        <label for="apiKeyInput">API Key</label>
+                        <input type="password" id="apiKeyInput" placeholder="Enter your RunningHub API Key">
+                    </div>
+                    <button class="save-btn" id="saveSettingsBtn">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import JSON Modal -->
+    <div class="modal hidden" id="importJsonModal">
+        <div class="modal-overlay">
+            <div class="modal-content modal-lg">
+                <div class="modal-header">
+                    <h3>📋 Import Workflow JSON</h3>
+                    <button class="close-btn" id="closeImportBtn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="control-group">
+                        <label for="workflowJson">Paste Workflow JSON (API Format)</label>
+                        <textarea id="workflowJson" rows="10"
+                            placeholder='{"1": {"inputs": {...}, "class_type": "..."}, ...}'></textarea>
+                    </div>
+                    <div class="detected-nodes hidden" id="detectedNodes">
+                        <h4>🔍 Detected Nodes:</h4>
+                        <div id="detectedList"></div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="analyze-btn" id="analyzeJsonBtn">🔍 Analyze Workflow</button>
+                        <button class="apply-btn" id="applyNodesBtn">✅ Apply to Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
