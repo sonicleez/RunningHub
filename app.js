@@ -360,10 +360,22 @@ function renderParamInput(param) {
     `;
 }
 
-// Lighting Canvas Visualization
-function updateLightingCanvas(inputId, azimuth) {
-    const canvas = document.getElementById(`${inputId}-canvas`);
+// Lighting Canvas Visualization - responds to all lighting params
+function updateLightingCanvas(nodeId) {
+    const canvas = document.getElementById(`param-${nodeId}-light_azimuth-canvas`);
     if (!canvas) return;
+
+    // Get all lighting values
+    const azimuthEl = document.getElementById(`param-${nodeId}-light_azimuth`);
+    const elevationEl = document.getElementById(`param-${nodeId}-light_elevation`);
+    const intensityEl = document.getElementById(`param-${nodeId}-light_intensity`);
+    const colorEl = document.getElementById(`param-${nodeId}-light_color_hex`);
+
+    const azimuth = azimuthEl ? parseFloat(azimuthEl.value) : 0;
+    const elevation = elevationEl ? parseFloat(elevationEl.value) : 0;
+    const intensity = intensityEl ? parseFloat(intensityEl.value) : 5;
+    const color = colorEl ? colorEl.value : '#fbbf24';
+
 
     const ctx = canvas.getContext('2d');
     const centerX = canvas.width / 2;
@@ -373,75 +385,98 @@ function updateLightingCanvas(inputId, azimuth) {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid
-    ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
+    // Draw grid circles
+    ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)';
     ctx.lineWidth = 1;
+    for (let r = 25; r <= radius; r += 25) {
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 30, r, r * 0.4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
 
-    // Draw ellipse (floor)
-    ctx.beginPath();
-    ctx.ellipse(centerX, centerY + 30, radius, radius * 0.4, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Draw center object (cube representation)
+    // Draw center object - height changes with elevation
+    const objHeight = 40 - Math.abs(elevation) / 90 * 15;
+    const objY = centerY - 10 + elevation / 90 * 10;
     ctx.fillStyle = 'rgba(139, 92, 246, 0.6)';
-    ctx.fillRect(centerX - 15, centerY - 10, 30, 40);
+    ctx.fillRect(centerX - 15, objY, 30, objHeight);
     ctx.strokeStyle = 'rgba(139, 92, 246, 0.8)';
-    ctx.strokeRect(centerX - 15, centerY - 10, 30, 40);
+    ctx.strokeRect(centerX - 15, objY, 30, objHeight);
 
-    // Calculate light position based on azimuth
+    // Calculate light position - azimuth rotates, elevation moves toward center/up
     const angleRad = (azimuth - 90) * Math.PI / 180;
-    const lightX = centerX + Math.cos(angleRad) * radius;
-    const lightY = centerY + Math.sin(angleRad) * radius * 0.4 + 30;
+    const elevFactor = 1 - Math.abs(elevation) / 90;
+    const lightRadius = radius * elevFactor;
+    const lightX = centerX + Math.cos(angleRad) * lightRadius;
+    const lightY = centerY + Math.sin(angleRad) * lightRadius * 0.4 + 30 - elevation / 90 * 40;
 
-    // Draw light ray
+    // Draw light ray - thickness based on intensity
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = color + '99';
+    ctx.lineWidth = Math.max(1, intensity / 4);
     ctx.moveTo(lightX, lightY);
-    ctx.lineTo(centerX, centerY + 10);
+    ctx.lineTo(centerX, objY + objHeight / 2);
     ctx.stroke();
 
-    // Draw light source
-    const gradient = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, 20);
-    gradient.addColorStop(0, 'rgba(251, 191, 36, 1)');
-    gradient.addColorStop(0.5, 'rgba(251, 191, 36, 0.5)');
-    gradient.addColorStop(1, 'rgba(251, 191, 36, 0)');
+    // Draw light glow - size based on intensity
+    const glowSize = 12 + intensity * 1.5;
+    const gradient = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, glowSize);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(0.4, color + 'AA');
+    gradient.addColorStop(0.8, color + '33');
+    gradient.addColorStop(1, color + '00');
 
     ctx.beginPath();
     ctx.fillStyle = gradient;
-    ctx.arc(lightX, lightY, 20, 0, Math.PI * 2);
+    ctx.arc(lightX, lightY, glowSize, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw light bulb center
+    // Draw light source center - size based on intensity
+    const bulbSize = 4 + intensity / 5;
     ctx.beginPath();
-    ctx.fillStyle = '#fbbf24';
-    ctx.arc(lightX, lightY, 8, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.arc(lightX, lightY, bulbSize, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw compass directions
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.font = '10px sans-serif';
+    // Draw compass
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '9px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('N', centerX, centerY - radius + 45);
-    ctx.fillText('S', centerX, centerY + radius + 55);
-    ctx.fillText('E', centerX + radius + 10, centerY + 30);
-    ctx.fillText('W', centerX - radius - 10, centerY + 30);
+    ctx.fillText('0°', centerX, centerY - radius + 42);
+    ctx.fillText('180°', centerX, centerY + radius + 58);
+    ctx.fillText('90°', centerX + radius + 12, centerY + 32);
+    ctx.fillText('270°', centerX - radius - 12, centerY + 32);
 }
 
 // Initialize lighting canvases after render
 function initLightingCanvases() {
-    const lightingControls = document.querySelectorAll('.lighting-control');
-    lightingControls.forEach(control => {
-        const canvas = control.querySelector('canvas');
-        if (canvas) {
-            const inputId = canvas.id.replace('-canvas', '');
-            const input = document.getElementById(inputId);
-            if (input) {
-                updateLightingCanvas(inputId, input.value);
+    // Find lighting nodes and initialize canvases
+    editableParameters.forEach(nodeGroup => {
+        if (nodeGroup.classType === 'qwenmultianglelight') {
+            const nodeId = nodeGroup.nodeId;
+            updateLightingCanvas(nodeId);
+
+            // Add change listeners to all lighting sliders for this node
+            const fields = ['light_azimuth', 'light_elevation', 'light_intensity'];
+            fields.forEach(field => {
+                const el = document.getElementById(`param-${nodeId}-${field}`);
+                if (el) {
+                    el.addEventListener('input', () => updateLightingCanvas(nodeId));
+                }
+            });
+
+            // Add listener for color picker
+            const colorEl = document.getElementById(`param-${nodeId}-light_color_hex`);
+            if (colorEl) {
+                colorEl.addEventListener('change', () => updateLightingCanvas(nodeId));
+            }
+            const colorPicker = document.getElementById(`param-${nodeId}-light_color_hex-picker`);
+            if (colorPicker) {
+                colorPicker.addEventListener('input', () => updateLightingCanvas(nodeId));
             }
         }
     });
 }
+
 function collectParameterValues() {
     const nodeInfoList = [];
 
