@@ -39,10 +39,7 @@ const elements = {
 
 // State
 let state = {
-    uploadedFile: null,
-    uploadedFileName: null,
     isGenerating: false,
-    isStressTesting: false,
     results: [],
     totalGenerationTime: 0,
     timerInterval: null,
@@ -538,7 +535,7 @@ async function pollForCompletion(taskId, onProgress) {
 // ===== UI Functions =====
 
 function updateStatus(progress, text) {
-    elements.statusProgress.style.width = `${progress}%`;
+    elements.progressFill.style.width = `${progress}%`;
     elements.statusText.textContent = text;
 }
 
@@ -552,9 +549,8 @@ function hideStatus() {
 
 function setGenerating(isGenerating) {
     state.isGenerating = isGenerating;
-    elements.generateBtn.disabled = isGenerating || state.isStressTesting;
+    elements.generateBtn.disabled = isGenerating;
     elements.generateBtn.classList.toggle('loading', isGenerating);
-    elements.stressTestBtn.disabled = isGenerating || state.isStressTesting;
 
     if (isGenerating) {
         showStatus();
@@ -624,7 +620,7 @@ function randomSeed() {
 // ===== Main Generation Flow =====
 
 async function generate() {
-    if (state.isGenerating || state.isStressTesting) return;
+    if (state.isGenerating) return;
 
     const apiKey = getApiKey();
     if (!apiKey) {
